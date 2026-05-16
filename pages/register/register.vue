@@ -21,7 +21,7 @@
       <!-- 标题 -->
       <view class="title-area">
         <text class="title">创建账号</text>
-        <text class="subtitle">加入 AiGROW，开始高效成长</text>
+        <text class="subtitle">加入 REDSPIDER，开始高效成长</text>
       </view>
 
       <!-- 表单卡片 -->

@@ -2,19 +2,71 @@
   <view class="page">
     <view class="banner" :class="{ show: loaded }">
       <view class="banner-row">
-        <svg class="robot" width="40" height="40" viewBox="0 0 120 120" fill="none">
-          <line x1="60" y1="8" x2="60" y2="20" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
-          <circle cx="60" cy="6" r="4" fill="#FFD93D">
-            <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite"/>
+        <svg class="robot" width="44" height="50" viewBox="0 0 140 160" fill="none">
+          <defs>
+            <radialGradient id="bGrad" cx="50%" cy="40%" r="50%">
+              <stop offset="0%" stop-color="#f0f4f8"/>
+              <stop offset="100%" stop-color="#d8e2ec"/>
+            </radialGradient>
+            <radialGradient id="hGrad" cx="50%" cy="35%" r="55%">
+              <stop offset="0%" stop-color="#f5f8fc"/>
+              <stop offset="100%" stop-color="#dde5ef"/>
+            </radialGradient>
+          </defs>
+
+          <!-- 底座光环 -->
+          <ellipse cx="70" cy="148" rx="40" ry="8" fill="rgba(79,172,254,0.15)"/>
+          <ellipse cx="70" cy="148" rx="28" ry="5" fill="rgba(79,172,254,0.25)"/>
+
+          <!-- 身体 -->
+          <rect x="40" y="92" width="60" height="50" rx="22" fill="url(#bGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
+          <!-- 身体蓝光条 -->
+          <rect x="52" y="102" width="36" height="3" rx="1.5" fill="#4facfe" opacity="0.7">
+            <animate attributeName="opacity" values="0.7;0.3;0.7" dur="2s" repeatCount="indefinite"/>
+          </rect>
+          <rect x="58" y="108" width="24" height="2" rx="1" fill="#4facfe" opacity="0.4">
+            <animate attributeName="opacity" values="0.4;0.15;0.4" dur="2s" begin="0.3s" repeatCount="indefinite"/>
+          </rect>
+          <!-- 胸口圆形 -->
+          <circle cx="70" cy="120" r="6" fill="none" stroke="#4facfe" stroke-width="1" opacity="0.5"/>
+          <circle cx="70" cy="120" r="3" fill="#4facfe" opacity="0.6">
+            <animate attributeName="opacity" values="0.6;0.2;0.6" dur="1.5s" repeatCount="indefinite"/>
           </circle>
-          <rect x="28" y="20" width="64" height="52" rx="16" fill="#fff"/>
-          <circle cx="47" cy="43" r="6" fill="#4facfe"/>
-          <circle cx="73" cy="43" r="6" fill="#4facfe"/>
-          <circle cx="47" cy="43" r="3" fill="#2b7de9"/>
-          <circle cx="73" cy="43" r="3" fill="#2b7de9"/>
-          <circle cx="49.5" cy="40" r="2" fill="#fff"/>
-          <circle cx="75.5" cy="40" r="2" fill="#fff"/>
-          <path d="M50 56 Q60 64 70 56" stroke="#4facfe" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+          <!-- 左臂 -->
+          <rect x="26" y="98" width="14" height="36" rx="7" fill="url(#bGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
+          <!-- 右臂 -->
+          <rect x="100" y="98" width="14" height="36" rx="7" fill="url(#bGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
+
+          <!-- 头部 -->
+          <ellipse cx="70" cy="58" rx="44" ry="40" fill="url(#hGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
+
+          <!-- 耳朵 -->
+          <rect x="20" y="48" width="10" height="18" rx="5" fill="#e0e8f0" stroke="#c8d6e5" stroke-width="0.8"/>
+          <rect x="110" y="48" width="10" height="18" rx="5" fill="#e0e8f0" stroke="#c8d6e5" stroke-width="0.8"/>
+
+          <!-- 天线 -->
+          <line x1="70" y1="18" x2="70" y2="26" stroke="#b8c8d8" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="70" cy="15" r="4" fill="#4facfe" opacity="0.8">
+            <animate attributeName="r" values="3;4.5;3" dur="1.5s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.8;0.4;0.8" dur="1.5s" repeatCount="indefinite"/>
+          </circle>
+
+          <!-- 脸部 - 黑色显示屏 -->
+          <rect x="38" y="40" width="64" height="42" rx="14" fill="#0a0e14" stroke="#1a2030" stroke-width="1"/>
+
+          <!-- 眼睛 - 弯曲线条 -->
+          <path d="M46 58 Q55 52 64 58" stroke="#4facfe" stroke-width="3" stroke-linecap="round" fill="none">
+            <animate attributeName="opacity" values="1;0.5;1" dur="3s" repeatCount="indefinite"/>
+          </path>
+          <path d="M76 58 Q85 52 94 58" stroke="#4facfe" stroke-width="3" stroke-linecap="round" fill="none">
+            <animate attributeName="opacity" values="1;0.5;1" dur="3s" repeatCount="indefinite"/>
+          </path>
+
+          <!-- 嘴巴 - 微笑弧线 -->
+          <path d="M62 69 Q70 75 78 69" stroke="#4facfe" stroke-width="2.5" stroke-linecap="round" fill="none">
+            <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite"/>
+          </path>
         </svg>
         <view class="banner-texts">
           <text class="banner-title">AI成长</text>
@@ -32,52 +84,6 @@
             <polyline points="9,6 15,12 9,18" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </view>
-      </view>
-    </view>
-
-    <view class="func-card" :class="{ show: loaded }">
-      <view class="func-item" @tap="onFeature('plan')">
-        <view class="func-icon func-icon-plan">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="#fff" stroke-width="1.5"/>
-            <rect x="9" y="3" width="6" height="4" rx="1" stroke="#fff" stroke-width="1.5"/>
-            <line x1="9" y1="12" x2="15" y2="12" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="9" y1="16" x2="13" y2="16" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-        </view>
-        <text class="func-name">录入计划</text>
-      </view>
-      <view class="func-item" @tap="onFeature('recommend')">
-        <view class="func-icon func-icon-rec">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2a7 7 0 00-4 12.7V17a1 1 0 001 1h6a1 1 0 001-1v-2.3A7 7 0 0012 2z" stroke="#fff" stroke-width="1.5"/>
-            <line x1="10" y1="21" x2="14" y2="21" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-        </view>
-        <text class="func-name">智能推荐</text>
-      </view>
-      <view class="func-item" @tap="onFeature('calendar')">
-        <view class="func-icon func-icon-cal">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="4" width="18" height="18" rx="2" stroke="#fff" stroke-width="1.5"/>
-            <line x1="3" y1="10" x2="21" y2="10" stroke="#fff" stroke-width="1.5"/>
-            <line x1="16" y1="2" x2="16" y2="6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="8" y1="2" x2="8" y2="6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-            <circle cx="8" cy="15" r="1" fill="#fff"/>
-            <circle cx="12" cy="15" r="1" fill="#fff"/>
-          </svg>
-        </view>
-        <text class="func-name">日程视图</text>
-      </view>
-      <view class="func-item" @tap="onFeature('stats')">
-        <view class="func-icon func-icon-stats">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="14" width="4" height="7" rx="1" stroke="#fff" stroke-width="1.5"/>
-            <rect x="10" y="9" width="4" height="12" rx="1" stroke="#fff" stroke-width="1.5"/>
-            <rect x="17" y="4" width="4" height="17" rx="1" stroke="#fff" stroke-width="1.5"/>
-          </svg>
-        </view>
-        <text class="func-name">数据统计</text>
       </view>
     </view>
 
@@ -119,7 +125,7 @@
                 <circle cx="30" cy="46" r="2.5" fill="#FFD93D" opacity="0.7"/>
               </svg>
             </view>
-            <view class="card-ai">
+            <view v-if="msg.role === 'ai'" class="card-ai">
             <view v-if="msg.type === 'text'">
               <text class="ai-hd" v-if="msg.title">{{ msg.title }}</text>
               <text class="ai-bd">{{ msg.content }}</text>
@@ -166,15 +172,19 @@
       </view>
     </scroll-view>
 
-    <view class="quick-bar" v-if="showTags">
-      <view class="quick-pill pill-plan" @tap="onQuick('帮我安排周末计划')">
-        <text>帮我安排周末计划</text>
+
+    <view class="func-bar" :class="{ show: loaded }">
+      <view class="func-pill" @tap="onFeature('plan')">
+        <text> 录入计划</text>
       </view>
-      <view class="quick-pill pill-remind" @tap="onQuick('提醒我喝水')">
-        <text>提醒我喝水</text>
+      <view class="func-pill" @tap="onFeature('recommend')">
+        <text> 智能推荐</text>
       </view>
-      <view class="quick-pill pill-review" @tap="onQuick('每天晚上复盘')">
-        <text>每天晚上复盘</text>
+      <view class="func-pill" @tap="onFeature('calendar')">
+        <text> 日程视图</text>
+      </view>
+      <view class="func-pill" @tap="onFeature('stats')">
+        <text> 数据统计</text>
       </view>
     </view>
 
@@ -193,9 +203,9 @@
         />
       </view>
       <!-- 语音模式 -->
-      <view v-else class="voice-area" @touchstart="startRecord" @touchend="stopRecord" @touchcancel="stopRecord">
+      <view v-else class="voice-area" @tap="toggleVoice">
         <text class="voice-tip" :class="{ recording: isRecording }">
-          {{ isRecording ? '正在录音...松开发送' : '按住说话' }}
+          {{ isRecording ? '正在录音...点击停止' : '点击说话' }}
         </text>
       </view>
 
@@ -234,6 +244,7 @@
           v-else
           class="inp-mic"
           :class="{ pressed: isRecording }"
+          @tap="toggleVoice"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <rect x="9" y="2" width="6" height="11" rx="3" stroke="#fff" stroke-width="1.6"/>
@@ -282,16 +293,15 @@ import { ref, nextTick, computed } from 'vue'
 const loaded = ref(false)
 const scrollTop = ref(0)
 const inputText = ref('')
-const inputMode = ref('text')
+const inputMode = ref('voice')
 const inputFocus = ref(false)
 const isRecording = ref(false)
 const addVisible = ref(false)
 const recordTimer = ref(null)
+let recognition = null
 
 const addOptions = [
-  { key: 'photo', label: '照片', bg: '#ece5ff', color: '#7b6df0' },
-  { key: 'file', label: '文件', bg: '#e6f7ff', color: '#409eff' },
-  { key: 'location', label: '位置', bg: '#dff5e0', color: '#67c23a' }
+  { key: 'photo', label: '照片', bg: '#ece5ff', color: '#7b6df0' }
 ]
 
 const messages = ref([
@@ -333,29 +343,54 @@ function onSend() {
   setTimeout(() => { messages.value.push(reply(t)); scroll() }, 700)
 }
 
-function startRecord() {
-  isRecording.value = true
-  recordTimer.value = setTimeout(() => {
+function toggleVoice() {
+  if (isRecording.value) {
     stopRecord()
-  }, 10000)
+  } else {
+    startRecord()
+  }
+}
+
+function startRecord() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+  if (!SpeechRecognition) {
+    uni.showToast({ title: '当前浏览器不支持语音识别', icon: 'none' })
+    return
+  }
+
+  isRecording.value = true
+  recognition = new SpeechRecognition()
+  recognition.lang = 'zh-CN'
+  recognition.continuous = false
+  recognition.interimResults = false
+
+  recognition.onresult = (e) => {
+    const text = e.results[0][0].transcript
+    isRecording.value = false
+    messages.value.push({ role: 'user', content: '[语音] ' + text })
+    scroll()
+    setTimeout(() => { messages.value.push(reply(text)); scroll() }, 700)
+  }
+
+  recognition.onerror = () => {
+    isRecording.value = false
+    uni.showToast({ title: '语音识别失败', icon: 'none' })
+  }
+
+  recognition.onend = () => {
+    isRecording.value = false
+  }
+
+  recognition.start()
 }
 
 function stopRecord() {
   if (!isRecording.value) return
   isRecording.value = false
-  clearTimeout(recordTimer.value)
-
-  // 模拟语音识别结果
-  const voiceResults = [
-    '明天上午开会',
-    '下午去健身',
-    '提醒我学习英语',
-    '安排周末出游'
-  ]
-  const result = voiceResults[Math.floor(Math.random() * voiceResults.length)]
-  messages.value.push({ role: 'user', content: '[语音] ' + result })
-  scroll()
-  setTimeout(() => { messages.value.push(reply(result)); scroll() }, 700)
+  if (recognition) {
+    recognition.stop()
+    recognition = null
+  }
 }
 
 function onQuick(t) {
@@ -375,12 +410,7 @@ function showAddMenu() {
 
 function onAdd(key) {
   addVisible.value = false
-  const map = {
-    photo: '已选择照片',
-    file: '已选择文件',
-    location: '已分享位置'
-  }
-  uni.showToast({ title: map[key], icon: 'none' })
+  uni.showToast({ title: '已选择照片', icon: 'none' })
 }
 
 function reply(input) {
@@ -423,7 +453,7 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
 @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
 
 .banner.show { animation: aIn 0.45s ease-out both; }
-.func-card.show { animation: aUp 0.45s ease-out 0.12s both; }
+.func-bar.show { animation: aUp 0.45s ease-out 0.12s both; }
 .msg-item { animation: aPop 0.3s ease-out both; }
 
 /* Banner */
@@ -460,23 +490,28 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
 .banner-title { display: block; color: #fff; font-size: 32rpx; font-weight: bold; }
 .banner-sub { display: block; color: rgba(255,255,255,0.8); font-size: 22rpx; margin-top: 4rpx; }
 
-/* 功能卡 */
-.func-card {
-  display: flex; justify-content: space-around;
-  background: #fff; border-radius: 18rpx;
-  padding: 22rpx 16rpx; margin: 0 24rpx 14rpx; opacity: 0;
-  box-shadow: 0 2rpx 12rpx rgba(79,172,254,0.08);
+/* 功能标签 */
+.func-bar {
+  display: flex;
+  gap: 12rpx;
+  padding: 0 24rpx;
+  margin-bottom: 12rpx;
+  opacity: 0;
+  flex-wrap: wrap;
 }
-.func-item { display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
-.func-icon {
-  width: 56rpx; height: 56rpx; border-radius: 16rpx;
-  display: flex; align-items: center; justify-content: center;
+.func-pill {
+  background: linear-gradient(135deg, #e8f4fd, #f0f7ff);
+  font-size: 22rpx;
+  color: #4a8cc7;
+  padding: 10rpx 18rpx;
+  border-radius: 22rpx;
+  transition: all 0.15s;
+  border: 1rpx solid rgba(79,172,254,0.15);
 }
-.func-icon-plan { background: linear-gradient(135deg, #4facfe, #6cb4ee); }
-.func-icon-rec { background: linear-gradient(135deg, #a8d8ff, #6cb4ee); }
-.func-icon-cal { background: linear-gradient(135deg, #89f7fe, #66a6ff); }
-.func-icon-stats { background: linear-gradient(135deg, #c3e8fd, #74b9ff); }
-.func-name { font-size: 22rpx; color: #333; font-weight: 500; }
+.func-pill:active {
+  background: #d4ecff;
+  transform: scale(0.96);
+}
 
 /* 聊天 */
 .chat-scroll { flex: 1; padding: 0 24rpx; overflow: hidden; }
@@ -506,10 +541,13 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
 .ai-tip { display: block; font-size: 24rpx; color: #99c4e8; line-height: 1.8; margin-top: 4rpx; }
 
 .card-user {
-  background: linear-gradient(135deg, #d4ecff, #e8f4fd);
-  border-radius: 16rpx; padding: 18rpx 22rpx; max-width: 76%;
+  background: linear-gradient(135deg, #4facfe, #6cb4ee);
+  border-radius: 24rpx 24rpx 6rpx 24rpx;
+  padding: 20rpx 26rpx;
+  max-width: 76%;
+  box-shadow: 0 4rpx 16rpx rgba(79,172,254,0.2);
 }
-.user-txt { font-size: 26rpx; color: #2c6faa; line-height: 1.7; }
+.user-txt { font-size: 27rpx; color: #fff; line-height: 1.7; }
 
 .card-hd { display: block; font-size: 26rpx; color: #333; line-height: 1.6; margin-bottom: 6rpx; }
 .plan-row { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 1rpx solid #eef5fb; }
