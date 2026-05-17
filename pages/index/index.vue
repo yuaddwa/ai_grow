@@ -2,102 +2,25 @@
   <view class="page">
     <view class="banner" :class="{ show: loaded }">
       <view class="banner-row">
-        <svg class="robot" width="44" height="50" viewBox="0 0 140 160" fill="none">
-          <defs>
-            <radialGradient id="bGrad" cx="50%" cy="40%" r="50%">
-              <stop offset="0%" stop-color="#f0f4f8"/>
-              <stop offset="100%" stop-color="#d8e2ec"/>
-            </radialGradient>
-            <radialGradient id="hGrad" cx="50%" cy="35%" r="55%">
-              <stop offset="0%" stop-color="#f5f8fc"/>
-              <stop offset="100%" stop-color="#dde5ef"/>
-            </radialGradient>
-          </defs>
-
-          <!-- 底座光环 -->
-          <ellipse cx="70" cy="148" rx="40" ry="8" fill="rgba(79,172,254,0.15)"/>
-          <ellipse cx="70" cy="148" rx="28" ry="5" fill="rgba(79,172,254,0.25)"/>
-
-          <!-- 身体 -->
-          <rect x="40" y="92" width="60" height="50" rx="22" fill="url(#bGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
-          <!-- 身体蓝光条 -->
-          <rect x="52" y="102" width="36" height="3" rx="1.5" fill="#4facfe" opacity="0.7">
-            <animate attributeName="opacity" values="0.7;0.3;0.7" dur="2s" repeatCount="indefinite"/>
-          </rect>
-          <rect x="58" y="108" width="24" height="2" rx="1" fill="#4facfe" opacity="0.4">
-            <animate attributeName="opacity" values="0.4;0.15;0.4" dur="2s" begin="0.3s" repeatCount="indefinite"/>
-          </rect>
-          <!-- 胸口圆形 -->
-          <circle cx="70" cy="120" r="6" fill="none" stroke="#4facfe" stroke-width="1" opacity="0.5"/>
-          <circle cx="70" cy="120" r="3" fill="#4facfe" opacity="0.6">
-            <animate attributeName="opacity" values="0.6;0.2;0.6" dur="1.5s" repeatCount="indefinite"/>
-          </circle>
-
-          <!-- 左臂 -->
-          <rect x="26" y="98" width="14" height="36" rx="7" fill="url(#bGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
-          <!-- 右臂 -->
-          <rect x="100" y="98" width="14" height="36" rx="7" fill="url(#bGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
-
-          <!-- 头部 -->
-          <ellipse cx="70" cy="58" rx="44" ry="40" fill="url(#hGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
-
-          <!-- 耳朵 -->
-          <rect x="20" y="48" width="10" height="18" rx="5" fill="#e0e8f0" stroke="#c8d6e5" stroke-width="0.8"/>
-          <rect x="110" y="48" width="10" height="18" rx="5" fill="#e0e8f0" stroke="#c8d6e5" stroke-width="0.8"/>
-
-          <!-- 天线 -->
-          <line x1="70" y1="18" x2="70" y2="26" stroke="#b8c8d8" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="70" cy="15" r="4" fill="#4facfe" opacity="0.8">
-            <animate attributeName="r" values="3;4.5;3" dur="1.5s" repeatCount="indefinite"/>
-            <animate attributeName="opacity" values="0.8;0.4;0.8" dur="1.5s" repeatCount="indefinite"/>
-          </circle>
-
-          <!-- 脸部 - 黑色显示屏 -->
-          <rect x="38" y="40" width="64" height="42" rx="14" fill="#0a0e14" stroke="#1a2030" stroke-width="1"/>
-
-          <!-- 眼睛 - 弯曲线条 -->
-          <path d="M46 58 Q55 52 64 58" stroke="#4facfe" stroke-width="3" stroke-linecap="round" fill="none">
-            <animate attributeName="opacity" values="1;0.5;1" dur="3s" repeatCount="indefinite"/>
-          </path>
-          <path d="M76 58 Q85 52 94 58" stroke="#4facfe" stroke-width="3" stroke-linecap="round" fill="none">
-            <animate attributeName="opacity" values="1;0.5;1" dur="3s" repeatCount="indefinite"/>
-          </path>
-
-          <!-- 嘴巴 - 微笑弧线 -->
-          <path d="M62 69 Q70 75 78 69" stroke="#4facfe" stroke-width="2.5" stroke-linecap="round" fill="none">
-            <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite"/>
-          </path>
-        </svg>
+        <text style="font-size:48rpx;">🤖</text>
         <view class="banner-texts">
           <text class="banner-title">AI成长</text>
           <text class="banner-sub">你的智能计划助手</text>
         </view>
         <view class="plan-entry" @tap="goNotifications">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#fff" stroke-width="1.5"/>
-            <path d="M13.73 21a2 2 0 01-3.46 0" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
+          <text style="font-size:28rpx;color:#fff;">🔔</text>
           <view class="badge" v-if="store.unreadCount > 0">
             <text class="badge-text">{{ store.unreadCount > 99 ? '99+' : store.unreadCount }}</text>
           </view>
         </view>
         <view class="plan-entry" @tap="goTasks">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="18" height="18" rx="3" stroke="#fff" stroke-width="1.5"/>
-            <path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <text style="font-size:28rpx;color:#fff;">📋</text>
         </view>
         <view class="plan-entry" @tap="goLogin">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="8" r="4" stroke="#fff" stroke-width="1.5"/>
-            <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
+          <text style="font-size:28rpx;color:#fff;">👤</text>
         </view>
         <view class="plan-entry" @tap="goPlans">
-          <text class="plan-entry-txt">计划</text>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <polyline points="9,6 15,12 9,18" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <text class="plan-entry-txt">计划 ›</text>
         </view>
       </view>
     </view>
@@ -108,37 +31,11 @@
           v-for="(msg, i) in messages"
           :key="i"
           class="msg-item"
-          :class="msg.role === 'user' ? 'align-right' : 'align-left'"
-          :style="{ animationDelay: (i * 0.1) + 's' }"
+          :class="[msg.role === 'user' ? 'align-right' : 'align-left', { show: msg.show }]"
+          :style="{ transitionDelay: (i * 0.06) + 's' }"
         >
           <view v-if="msg.role === 'ai'" class="ai-avatar">
-              <svg width="36" height="36" viewBox="0 0 60 60" fill="none">
-                <!-- 天线 -->
-                <line x1="30" y1="5" x2="30" y2="12" stroke="#4facfe" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="30" cy="4" r="2.5" fill="#FFD93D"/>
-                <!-- 头 -->
-                <rect x="14" y="12" width="32" height="26" rx="8" fill="#e8f4fd"/>
-                <rect x="14" y="12" width="32" height="26" rx="8" stroke="#d4ecff" stroke-width="1"/>
-                <!-- 耳朵 -->
-                <rect x="10" y="20" width="5" height="10" rx="2.5" fill="#c3e8fd"/>
-                <rect x="45" y="20" width="5" height="10" rx="2.5" fill="#c3e8fd"/>
-                <!-- 眼睛 -->
-                <circle cx="24" cy="25" r="4" fill="#4facfe"/>
-                <circle cx="36" cy="25" r="4" fill="#4facfe"/>
-                <circle cx="24" cy="25" r="2" fill="#2b7de9"/>
-                <circle cx="36" cy="25" r="2" fill="#2b7de9"/>
-                <circle cx="25.5" cy="23" r="1.3" fill="#fff"/>
-                <circle cx="37.5" cy="23" r="1.3" fill="#fff"/>
-                <!-- 腮红 -->
-                <ellipse cx="19" cy="31" rx="3.5" ry="2" fill="#FFB5C5" opacity="0.3"/>
-                <ellipse cx="41" cy="31" rx="3.5" ry="2" fill="#FFB5C5" opacity="0.3"/>
-                <!-- 嘴巴 -->
-                <path d="M25 33 Q30 38 35 33" stroke="#4facfe" stroke-width="2" stroke-linecap="round" fill="none"/>
-                <!-- 身体 -->
-                <rect x="20" y="40" width="20" height="12" rx="6" fill="#e8f4fd"/>
-                <rect x="20" y="40" width="20" height="12" rx="6" stroke="#d4ecff" stroke-width="1"/>
-                <circle cx="30" cy="46" r="2.5" fill="#FFD93D" opacity="0.7"/>
-              </svg>
+              <text style="font-size:36rpx;">🤖</text>
             </view>
             <view v-if="msg.role === 'ai'" class="card-ai">
             <view v-if="msg.type === 'text'">
@@ -150,11 +47,7 @@
               <text class="card-hd">{{ msg.content }}</text>
               <view class="plan-row" v-for="p in msg.plans" :key="p.name">
                 <view class="plan-l">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="9" stroke="#4facfe" stroke-width="1.5"/>
-                    <line x1="12" y1="7" x2="12" y2="12" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-                    <line x1="12" y1="12" x2="16" y2="14" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-                  </svg>
+                  <text style="font-size:22rpx;">⏰</text>
                   <text class="plan-nm">{{ p.name }}</text>
                 </view>
                 <text class="plan-tm">{{ p.time }}</text>
@@ -183,6 +76,15 @@
           <view v-if="msg.role === 'user'" class="card-user">
             <text class="user-txt">{{ msg.content }}</text>
           </view>
+          <view v-if="msg.role === 'user'" class="user-avatar">
+            <image
+              v-if="userAvatar"
+              :src="userAvatar"
+              class="user-avatar-img"
+              mode="aspectFill"
+            />
+            <text v-else style="font-size:36rpx;color:#4facfe;">👤</text>
+          </view>
         </view>
       </view>
     </scroll-view>
@@ -209,16 +111,19 @@
         <input
           class="inp"
           v-model="inputText"
+          type="text"
           placeholder="输入计划..."
           placeholder-class="inp-ph"
           confirm-type="send"
           :focus="inputFocus"
           @confirm="onSend"
           @blur="inputFocus = false"
+          @compositionstart="composing = true"
+          @compositionend="composing = false"
         />
       </view>
       <!-- 语音模式 -->
-      <view v-else class="voice-area" @tap="toggleVoice">
+      <view v-else class="voice-area" hover-class="voice-area-hover" :hover-start-time="10" @click="toggleVoice">
         <text class="voice-tip" :class="{ recording: isRecording }">
           {{ isRecording ? '正在录音...点击停止' : '点击说话' }}
         </text>
@@ -227,20 +132,8 @@
       <view class="inp-tools">
         <!-- 键盘/语音切换 -->
         <view class="inp-btn" @tap="toggleMode">
-          <svg v-if="inputMode === 'text'" width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <rect x="2" y="6" width="20" height="12" rx="2" stroke="#bbb" stroke-width="1.5"/>
-            <line x1="7" y1="10" x2="7" y2="10.01" stroke="#bbb" stroke-width="1.8" stroke-linecap="round"/>
-            <line x1="11" y1="10" x2="11" y2="10.01" stroke="#bbb" stroke-width="1.8" stroke-linecap="round"/>
-            <line x1="15" y1="10" x2="15" y2="10.01" stroke="#bbb" stroke-width="1.8" stroke-linecap="round"/>
-            <line x1="19" y1="10" x2="19" y2="10.01" stroke="#bbb" stroke-width="1.8" stroke-linecap="round"/>
-            <line x1="7" y1="14" x2="17" y2="14" stroke="#bbb" stroke-width="1.2" stroke-linecap="round"/>
-          </svg>
-          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <rect x="6" y="4" width="12" height="16" rx="2" stroke="#bbb" stroke-width="1.5"/>
-            <line x1="10" y1="8" x2="14" y2="8" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="10" y1="11" x2="14" y2="11" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="10" y1="14" x2="14" y2="14" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
+          <text v-if="inputMode === 'text'" style="font-size:28rpx;color:#bbb;">⌨</text>
+          <text v-else style="font-size:28rpx;color:#bbb;">🎤</text>
         </view>
 
         <!-- 发送 / 麦克风 -->
@@ -250,30 +143,20 @@
           :class="{ active: inputText.length > 0 }"
           @tap="onSend"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M22 2L11 13" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <text style="font-size:28rpx;color:#fff;">发送</text>
         </view>
         <view
           v-else
           class="inp-mic"
           :class="{ pressed: isRecording }"
-          @tap="toggleVoice"
+          @click="toggleVoice"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <rect x="9" y="2" width="6" height="11" rx="3" stroke="#fff" stroke-width="1.6"/>
-            <path d="M5 11v1a7 7 0 0014 0v-1" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
-            <line x1="12" y1="19" x2="12" y2="22" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
+          <text style="font-size:28rpx;color:#fff;">🎤</text>
         </view>
 
         <!-- 加号 -->
         <view class="inp-btn" @tap="showAddMenu">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <line x1="12" y1="6" x2="12" y2="18" stroke="#bbb" stroke-width="2" stroke-linecap="round"/>
-            <line x1="6" y1="12" x2="18" y2="12" stroke="#bbb" stroke-width="2" stroke-linecap="round"/>
-          </svg>
+          <text style="font-size:36rpx;color:#bbb;">＋</text>
         </view>
       </view>
     </view>
@@ -283,17 +166,7 @@
       <view class="add-panel" @tap.stop>
         <view class="add-item" v-for="a in addOptions" :key="a.key" @tap="onAdd(a.key)">
           <view class="add-icon-box" :style="{ background: a.bg }">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path v-if="a.key==='photo'" d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2z M8.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3z M21 15l-5-5L5 21" :stroke="a.color" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <template v-if="a.key==='file'">
-                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" :stroke="a.color" stroke-width="1.5"/>
-                <polyline points="14,2 14,8 20,8" :stroke="a.color" stroke-width="1.5"/>
-              </template>
-              <template v-if="a.key==='location'">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" :stroke="a.color" stroke-width="1.5"/>
-                <circle cx="12" cy="10" r="3" :stroke="a.color" stroke-width="1.5"/>
-              </template>
-            </svg>
+            <text style="font-size:36rpx;color:#7b6df0;">🖼️</text>
           </view>
           <text class="add-label">{{ a.label }}</text>
         </view>
@@ -303,8 +176,8 @@
 </template>
 
 <script setup>
-import { ref, nextTick, computed, onMounted, onUnmounted } from 'vue'
-import { getAccessToken, sendChatMessage, getUnreadCount } from '../../utils/api.js'
+import { ref, nextTick, computed, onMounted } from 'vue'
+import { getAccessToken, sendChatMessage, transcribeAudio, getUnreadCount, getUserInfo, BASE_URL } from '../../utils/api.js'
 import { store } from '../../utils/store.js'
 
 const loaded = ref(false)
@@ -317,7 +190,10 @@ const addVisible = ref(false)
 const recordTimer = ref(null)
 const sessionId = ref(null)
 const sending = ref(false)
-let recognition = null
+const userAvatar = ref('')
+const composing = ref(false)
+let recorderManager = null
+let h5MediaRecorder = null
 
 const addOptions = [
   { key: 'photo', label: '照片', bg: '#ece5ff', color: '#7b6df0' }
@@ -325,7 +201,7 @@ const addOptions = [
 
 const messages = ref([
   {
-    role: 'ai', type: 'text',
+    role: 'ai', type: 'text', show: true,
     title: '你好！我是你的计划助手 👋',
     content: '你可以告诉我你的计划，我会帮你安排到日程中，让你的每一天都更高效。',
     tip: '比如：明天上午10点开会，下午去健身，晚上学习2小时'
@@ -334,12 +210,20 @@ const messages = ref([
 
 const showTags = computed(() => messages.value.length <= 2)
 
-setTimeout(() => { loaded.value = true }, 80)
-
 onMounted(() => {
+  // 确保初始状态渲染后再触发入场动画
+  nextTick(() => {
+    setTimeout(() => { loaded.value = true }, 50)
+  })
+
   if (getAccessToken()) {
     getUnreadCount().then(res => {
       store.unreadCount = res.count || 0
+    }).catch(() => {})
+    getUserInfo().then(res => {
+      if (res.avatarUrl) {
+        userAvatar.value = res.avatarUrl.replace(/^https?:\/\/[^\/]+/, BASE_URL)
+      }
     }).catch(() => {})
   }
 })
@@ -375,19 +259,25 @@ function toggleMode() {
 }
 
 function onSend() {
+  if (composing.value) return
   const t = inputText.value.trim()
   if (!t || sending.value) return
   sending.value = true
-  messages.value.push({ role: 'user', content: t })
+  messages.value.push({ role: 'user', content: t, show: true })
   inputText.value = ''
   scroll()
   sendChatMessage(t, sessionId.value || undefined).then(res => {
     sessionId.value = res.sessionId
-    messages.value.push({ role: 'ai', type: 'text', title: '', content: res.reply, tip: '' })
+    messages.value.push({ role: 'ai', type: 'text', title: '', content: res.reply, tip: '', show: true })
     scroll()
-  }).catch(() => {
-    messages.value.push({ role: 'ai', type: 'text', title: '', content: '网络异常，请稍后重试', tip: '' })
-    scroll()
+  }).catch((e) => {
+    if (e && e.code === 'UNAUTHORIZED') {
+      uni.showToast({ title: '请先登录', icon: 'none' })
+      setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }) }, 800)
+    } else {
+      messages.value.push({ role: 'ai', type: 'text', title: '', content: '网络异常，请稍后重试', tip: '', show: true })
+      scroll()
+    }
   }).finally(() => {
     sending.value = false
   })
@@ -402,67 +292,164 @@ function toggleVoice() {
 }
 
 function startRecord() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-  if (!SpeechRecognition) {
-    uni.showToast({ title: '当前浏览器不支持语音识别', icon: 'none' })
+  if (!getAccessToken()) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }) }, 800)
     return
   }
 
   isRecording.value = true
-  recognition = new SpeechRecognition()
-  recognition.lang = 'zh-CN'
-  recognition.continuous = false
-  recognition.interimResults = false
 
-  recognition.onresult = (e) => {
-    const text = e.results[0][0].transcript
-    isRecording.value = false
-    messages.value.push({ role: 'user', content: '[语音] ' + text })
-    scroll()
-    sending.value = true
-    sendChatMessage(text, sessionId.value || undefined).then(res => {
-      sessionId.value = res.sessionId
-      messages.value.push({ role: 'ai', type: 'text', title: '', content: res.reply, tip: '' })
-      scroll()
-    }).catch(() => {
-      messages.value.push({ role: 'ai', type: 'text', title: '', content: '网络异常，请稍后重试', tip: '' })
-      scroll()
-    }).finally(() => { sending.value = false })
+  // App / 小程序：uni.getRecorderManager
+  if (uni.getRecorderManager) {
+    try {
+      if (!recorderManager) {
+        recorderManager = uni.getRecorderManager()
+        recorderManager.onStop((res) => {
+          isRecording.value = false
+          if (res.tempFilePath) handleVoiceResult(res.tempFilePath)
+        })
+        recorderManager.onError((err) => {
+          isRecording.value = false
+          uni.showToast({ title: '录音失败', icon: 'none' })
+        })
+      }
+      recorderManager.start({
+        duration: 60, sampleRate: 16000,
+        numberOfChannels: 1, encodeBitRate: 48000, format: 'mp3'
+      })
+    } catch (e) {
+      isRecording.value = false
+      uni.showToast({ title: '录音初始化失败', icon: 'none' })
+    }
+    return
   }
 
-  recognition.onerror = () => {
+  // H5 浏览器：MediaRecorder API
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     isRecording.value = false
-    uni.showToast({ title: '语音识别失败', icon: 'none' })
+    uni.showToast({ title: '当前环境不支持录音', icon: 'none' })
+    return
   }
 
-  recognition.onend = () => {
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    const mr = new MediaRecorder(stream)
+    const chunks = []
+    mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
+    mr.onstop = () => {
+      stream.getTracks().forEach(t => t.stop())
+      isRecording.value = false
+      const blob = new Blob(chunks, { type: 'audio/webm' })
+      // H5 用 fetch 直接上传，不走 uni.uploadFile
+      uploadAndTranscribeBlob(blob)
+    }
+    mr.start()
+    h5MediaRecorder = mr
+  }).catch(() => {
     isRecording.value = false
-  }
-
-  recognition.start()
+    uni.showToast({ title: '无法访问麦克风', icon: 'none' })
+  })
 }
 
 function stopRecord() {
   if (!isRecording.value) return
   isRecording.value = false
-  if (recognition) {
-    recognition.stop()
-    recognition = null
+  if (recorderManager) {
+    recorderManager.stop()
+  } else if (h5MediaRecorder && h5MediaRecorder.state === 'recording') {
+    h5MediaRecorder.stop()
   }
+}
+
+// H5 专用：直接 fetch 上传音频 blob
+function uploadAndTranscribeBlob(blob) {
+  messages.value.push({ role: 'user', content: '[语音] 识别中...', show: true })
+  scroll()
+
+  const form = new FormData()
+  form.append('file', blob, 'speech.webm')
+
+  const token = getAccessToken()
+  fetch(BASE_URL + '/api/v1/speech/transcribe', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token },
+    body: form
+  }).then(res => {
+    if (res.ok) return res.json()
+    if (res.status === 401) throw { code: 'UNAUTHORIZED' }
+    return res.json().catch(() => { throw { message: '语音识别失败' } }).then(d => { throw d })
+  }).then(res => {
+    onTranscribeSuccess(res.text)
+  }).catch((e) => {
+    if (e && e.code === 'UNAUTHORIZED') {
+      uni.showToast({ title: '请先登录', icon: 'none' })
+      setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }) }, 800)
+    } else {
+      uni.showToast({ title: e.message || '语音识别失败', icon: 'none' })
+    }
+  })
+}
+
+function handleVoiceResult(filePath) {
+  messages.value.push({ role: 'user', content: '[语音] 识别中...', show: true })
+  scroll()
+
+  transcribeAudio(filePath).then(res => {
+    onTranscribeSuccess(res.text || '')
+  }).catch((e) => {
+    if (e && e.code === 'UNAUTHORIZED') {
+      uni.showToast({ title: '请先登录', icon: 'none' })
+      setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }) }, 800)
+    } else {
+      uni.showToast({ title: e.message || '语音识别失败', icon: 'none' })
+    }
+  })
+}
+
+function onTranscribeSuccess(text) {
+  if (!text) {
+    messages.value.push({ role: 'ai', type: 'text', title: '', content: '未识别到内容，请重试', tip: '', show: true })
+    scroll()
+    return
+  }
+  const lastUserMsg = messages.value[messages.value.length - 1]
+  if (lastUserMsg && lastUserMsg.role === 'user') {
+    lastUserMsg.content = '[语音] ' + text
+  }
+  scroll()
+  sending.value = true
+  sendChatMessage(text, sessionId.value || undefined).then(res => {
+    sessionId.value = res.sessionId
+    messages.value.push({ role: 'ai', type: 'text', title: '', content: res.reply, tip: '', show: true })
+    scroll()
+  }).catch((e) => {
+    if (e && e.code === 'UNAUTHORIZED') {
+      uni.showToast({ title: '请先登录', icon: 'none' })
+      setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }) }, 800)
+    } else {
+      messages.value.push({ role: 'ai', type: 'text', title: '', content: '网络异常，请稍后重试', tip: '', show: true })
+      scroll()
+    }
+  }).finally(() => { sending.value = false })
 }
 
 function onQuick(t) {
   if (sending.value) return
   sending.value = true
-  messages.value.push({ role: 'user', content: t })
+  messages.value.push({ role: 'user', content: t, show: true })
   scroll()
   sendChatMessage(t, sessionId.value || undefined).then(res => {
     sessionId.value = res.sessionId
-    messages.value.push({ role: 'ai', type: 'text', title: '', content: res.reply, tip: '' })
+    messages.value.push({ role: 'ai', type: 'text', title: '', content: res.reply, tip: '', show: true })
     scroll()
-  }).catch(() => {
-    messages.value.push({ role: 'ai', type: 'text', title: '', content: '网络异常，请稍后重试', tip: '' })
-    scroll()
+  }).catch((e) => {
+    if (e && e.code === 'UNAUTHORIZED') {
+      uni.showToast({ title: '请先登录', icon: 'none' })
+      setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }) }, 800)
+    } else {
+      messages.value.push({ role: 'ai', type: 'text', title: '', content: '网络异常，请稍后重试', tip: '', show: true })
+      scroll()
+    }
   }).finally(() => { sending.value = false })
 }
 
@@ -496,14 +483,11 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
 }
 
 /* 动画 */
-@keyframes aIn { from { opacity:0; transform:translateY(-24rpx); } to { opacity:1; transform:translateY(0); } }
-@keyframes aUp { from { opacity:0; transform:translateY(32rpx); } to { opacity:1; transform:translateY(0); } }
-@keyframes aPop { from { opacity:0; transform:scale(0.94) translateY(12rpx); } to { opacity:1; transform:scale(1) translateY(0); } }
 @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
 
-.banner.show { animation: aIn 0.45s ease-out both; }
-.func-bar.show { animation: aUp 0.45s ease-out 0.12s both; }
-.msg-item { animation: aPop 0.3s ease-out both; }
+.banner.show { opacity: 1; transform: translateY(0); }
+.func-bar.show { opacity: 1; transform: translateY(0); }
+.msg-item.show { opacity: 1; transform: scale(1) translateY(0); }
 
 /* Banner */
 .banner {
@@ -512,6 +496,8 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
   padding: 24rpx 28rpx;
   margin: 0 24rpx 14rpx;
   opacity: 0;
+  transform: translateY(-24rpx);
+  transition: opacity 0.45s ease-out, transform 0.45s ease-out;
 }
 .banner-row {
   display: flex;
@@ -561,6 +547,8 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
   padding: 0 24rpx;
   margin-bottom: 12rpx;
   opacity: 0;
+  transform: translateY(32rpx);
+  transition: opacity 0.45s ease-out 0.12s, transform 0.45s ease-out 0.12s;
   flex-wrap: wrap;
 }
 .func-pill {
@@ -580,7 +568,12 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
 /* 聊天 */
 .chat-scroll { flex: 1; padding: 0 24rpx; overflow: hidden; }
 .msg-list { padding-bottom: 14rpx; }
-.msg-item { margin-bottom: 14rpx; }
+.msg-item {
+  margin-bottom: 14rpx;
+  opacity: 0;
+  transform: scale(0.94) translateY(12rpx);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
 .align-left { display: flex; justify-content: flex-start; align-items: flex-start; gap: 12rpx; }
 .align-right { display: flex; justify-content: flex-end; }
 
@@ -610,8 +603,27 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
   padding: 20rpx 26rpx;
   max-width: 76%;
   box-shadow: 0 4rpx 16rpx rgba(79,172,254,0.2);
+  word-break: break-all;
 }
-.user-txt { font-size: 27rpx; color: #fff; line-height: 1.7; }
+.user-txt { font-size: 27rpx; color: #fff; line-height: 1.7; word-break: break-all; }
+
+.user-avatar {
+  flex-shrink: 0;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e8f4fd, #d4ecff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(79,172,254,0.12);
+}
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+}
 
 .card-hd { display: block; font-size: 26rpx; color: #333; line-height: 1.6; margin-bottom: 6rpx; }
 .plan-row { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 1rpx solid #eef5fb; }
@@ -672,7 +684,12 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
 .inp-ph { color: #b8d8f0; font-size: 24rpx; }
 
 .voice-area {
-  padding: 20rpx 0; text-align: center;
+  padding: 24rpx 0; text-align: center;
+  min-height: 80rpx; box-sizing: border-box;
+}
+.voice-area-hover {
+  background: rgba(79,172,254,0.05);
+  border-radius: 12rpx;
 }
 .voice-tip {
   font-size: 26rpx; color: #99c4e8;

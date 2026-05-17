@@ -11,9 +11,7 @@
 
     <!-- 返回按钮 -->
     <view class="back-btn" @tap="goBack">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <polyline points="15,18 9,12 15,6" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <text style="font-size:36rpx;color:#333;">‹</text>
     </view>
 
     <!-- 标题 -->
@@ -38,10 +36,7 @@
     <!-- 任务列表 -->
     <scroll-view class="task-scroll" scroll-y :refresher-enabled="true" :refresher-triggered="refreshing" @refresherrefresh="onRefresh">
       <view v-if="tasks.length === 0 && !loading" class="empty-state">
-        <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="3" width="18" height="18" rx="3" stroke="#d4ecff" stroke-width="1.2"/>
-          <path d="M9 12l2 2 4-4" stroke="#a8d8ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <text style="font-size:80rpx;opacity:0.3;">📋</text>
         <text class="empty-text">暂无任务</text>
         <text class="empty-sub">与 AI 对话，创建你的第一个任务</text>
       </view>
@@ -50,7 +45,8 @@
         class="task-card"
         v-for="(task, i) in tasks"
         :key="task.id"
-        :style="{ animationDelay: (i * 0.08) + 's' }"
+        :class="{ show: loaded }"
+        :style="{ transitionDelay: (i * 0.08) + 's' }"
         @tap="onTaskTap(task)"
       >
         <view class="task-left">
@@ -61,10 +57,7 @@
           <text class="task-desc" v-if="task.description">{{ task.description }}</text>
           <view class="task-meta">
             <view class="meta-item" v-if="task.dueDate">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="#99c4e8" stroke-width="1.3"/>
-                <polyline points="12,6 12,12 16,14" stroke="#99c4e8" stroke-width="1.3" stroke-linecap="round"/>
-              </svg>
+              <text style="font-size:22rpx;">⏰</text>
               <text class="meta-text">{{ task.dueDate }}</text>
             </view>
             <view class="task-tag" :class="statusClass(task.status)">{{ statusText(task.status) }}</view>
@@ -76,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { getMyTasks } from '../../utils/api.js'
 
 const loaded = ref(false)
@@ -92,7 +85,7 @@ const tabs = [
   { label: '已取消', value: 'CANCELLED' }
 ]
 
-setTimeout(() => { loaded.value = true }, 80)
+onMounted(() => { nextTick(() => { setTimeout(() => { loaded.value = true }, 50) }) })
 
 onMounted(() => { loadTasks() })
 
@@ -171,16 +164,16 @@ function statusText(status) {
 .back-btn {
   position: absolute; top: 100rpx; left: 32rpx; z-index: 10;
   width: 64rpx; height: 64rpx; border-radius: 50%;
-  background: rgba(255,255,255,0.7); backdrop-filter: blur(10rpx);
+  background: rgba(255,255,255,0.7);
   display: flex; align-items: center; justify-content: center;
 }
 
 /* 头部 */
 .header {
   position: relative; z-index: 1;
-  padding: 120rpx 48rpx 20rpx;
+  padding: 120rpx 48rpx 20rpx 112rpx;
   opacity: 0; transform: translateY(30rpx);
-  transition: all 0.6s ease-out;
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 .header.show { opacity: 1; transform: translateY(0); }
 .title { display: block; font-size: 48rpx; font-weight: 800; color: #222; letter-spacing: 2rpx; }
@@ -221,19 +214,15 @@ function statusText(status) {
 /* 任务卡片 */
 .task-card {
   display: flex; gap: 20rpx; padding: 28rpx;
-  background: rgba(255,255,255,0.92); backdrop-filter: blur(20rpx);
+  background: rgba(255,255,255,0.92);
   border-radius: 24rpx; margin-bottom: 16rpx;
   box-shadow: 0 4rpx 20rpx rgba(79,172,254,0.06);
   border: 1rpx solid rgba(255,255,255,0.6);
-  animation: fadeInUp 0.4s ease-out both;
-  transition: transform 0.2s;
+  opacity: 0; transform: translateY(20rpx);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
 }
+.task-card.show { opacity: 1; transform: translateY(0); }
 .task-card:active { transform: scale(0.98); }
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20rpx); }
-  to { opacity: 1; transform: translateY(0); }
-}
 
 .task-left { flex-shrink: 0; padding-top: 8rpx; }
 .task-status-dot {

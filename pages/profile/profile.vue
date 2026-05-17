@@ -25,72 +25,51 @@
 
     <!-- 返回按钮 -->
     <view class="back-btn" @tap="goBack">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <polyline points="15,18 9,12 15,6" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <text style="font-size:36rpx;color:#333;">‹</text>
     </view>
 
     <!-- 头部区域 -->
     <view class="hero" :class="{ show: loaded }">
       <view class="hero-bg">
-        <svg class="hero-wave" viewBox="0 0 750 200" preserveAspectRatio="none">
-          <path d="M0,80 C180,20 360,140 750,80 L750,0 L0,0 Z" fill="rgba(79,172,254,0.08)">
-            <animate attributeName="d" values="M0,80 C180,20 360,140 750,80 L750,0 L0,0 Z;M0,80 C180,140 360,20 750,80 L750,0 L0,0 Z;M0,80 C180,20 360,140 750,80 L750,0 L0,0 Z" dur="4s" repeatCount="indefinite"/>
-          </path>
-          <path d="M0,100 C200,50 400,150 750,100 L750,0 L0,0 Z" fill="rgba(0,242,254,0.05)">
-            <animate attributeName="d" values="M0,100 C200,50 400,150 750,100 L750,0 L0,0 Z;M0,100 C200,150 400,50 750,100 L750,0 L0,0 Z;M0,100 C200,50 400,150 750,100 L750,0 L0,0 Z" dur="5s" repeatCount="indefinite"/>
-          </path>
-        </svg>
+        <view class="hero-wave" style="width:100%;height:100%;background:linear-gradient(135deg,rgba(79,172,254,0.08),rgba(0,242,254,0.05));"></view>
       </view>
 
       <!-- 头像 -->
-      <view class="avatar-area">
+      <view class="avatar-area" @tap="chooseAvatar">
         <view class="avatar-ring"></view>
         <view class="avatar-ring ring2"></view>
         <view class="avatar-box">
-          <svg width="60" height="60" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="8" r="4" stroke="#4facfe" stroke-width="1.5"/>
-            <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
+          <image
+            v-if="userInfo.avatarUrl"
+            :src="userInfo.avatarUrl + '?t=' + avatarKey"
+            class="avatar-img"
+            mode="aspectFill"
+          />
+          <text v-else style="font-size:48rpx;color:#4facfe;">👤</text>
         </view>
-        <view class="online-dot"></view>
+        <view class="avatar-edit-hint">
+          <text style="font-size:24rpx;color:#fff;">📷</text>
+        </view>
       </view>
 
       <!-- 用户信息 -->
       <text class="nickname">{{ userInfo.nickname || 'REDSPIDER用户' }}</text>
-      <text class="email">{{ userInfo.email || '未设置邮箱' }}</text>
+      <text class="email">{{ userInfo.phone || '未绑定手机号' }}</text>
 
       <!-- 编辑资料按钮 -->
       <view class="edit-btn" @tap="editProfile">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-          <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <text>编辑资料</text>
+        <text style="font-size:24rpx;color:#4facfe;">✏️ 编辑资料</text>
       </view>
     </view>
 
     <!-- 数据统计卡片 -->
     <view class="stats-card" :class="{ show: loaded }">
-      <view class="stat-item" v-for="(s, i) in stats" :key="i" :style="{ animationDelay: (i * 0.1 + 0.3) + 's' }">
+      <view class="stat-item" :class="{ show: loaded }" v-for="(s, i) in stats" :key="i" :style="{ transitionDelay: (i * 0.1 + 0.3) + 's' }">
         <view class="stat-icon" :style="{ background: s.bg }">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path v-if="s.key === 'plans'" d="M9 11l3 3L22 4" :stroke="s.color" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <template v-if="s.key === 'plans'"><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" :stroke="s.color" stroke-width="1.5"/></template>
-            <template v-if="s.key === 'days'">
-              <rect x="3" y="4" width="18" height="18" rx="2" :stroke="s.color" stroke-width="1.5"/>
-              <line x1="16" y1="2" x2="16" y2="6" :stroke="s.color" stroke-width="1.5"/>
-              <line x1="8" y1="2" x2="8" y2="6" :stroke="s.color" stroke-width="1.5"/>
-              <line x1="3" y1="10" x2="21" y2="10" :stroke="s.color" stroke-width="1.5"/>
-            </template>
-            <template v-if="s.key === 'streak'">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" :stroke="s.color" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </template>
-            <template v-if="s.key === 'hours'">
-              <circle cx="12" cy="12" r="10" :stroke="s.color" stroke-width="1.5"/>
-              <polyline points="12,6 12,12 16,14" :stroke="s.color" stroke-width="1.5" stroke-linecap="round"/>
-            </template>
-          </svg>
+          <text v-if="s.key === 'plans'" style="font-size:32rpx;">✔</text>
+          <text v-else-if="s.key === 'days'" style="font-size:32rpx;">📅</text>
+          <text v-else-if="s.key === 'streak'" style="font-size:32rpx;">⚡</text>
+          <text v-else-if="s.key === 'hours'" style="font-size:32rpx;">⏰</text>
         </view>
         <text class="stat-value">{{ s.value }}</text>
         <text class="stat-label">{{ s.label }}</text>
@@ -101,58 +80,17 @@
     <view class="menu-card" :class="{ show: loaded }">
       <view
         class="menu-item"
+        :class="{ show: loaded }"
         v-for="(m, i) in menus"
         :key="i"
-        :style="{ animationDelay: (i * 0.08 + 0.5) + 's' }"
+        :style="{ transitionDelay: (i * 0.08 + 0.5) + 's' }"
         @tap="onMenu(m.key)"
       >
         <view class="menu-icon" :style="{ background: m.bg }">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <template v-if="m.key === 'plan'">
-              <rect x="3" y="4" width="18" height="18" rx="2" :stroke="m.color" stroke-width="1.5"/>
-              <line x1="16" y1="2" x2="16" y2="6" :stroke="m.color" stroke-width="1.5"/>
-              <line x1="8" y1="2" x2="8" y2="6" :stroke="m.color" stroke-width="1.5"/>
-              <line x1="3" y1="10" x2="21" y2="10" :stroke="m.color" stroke-width="1.5"/>
-              <line x1="8" y1="14" x2="16" y2="14" :stroke="m.color" stroke-width="1.2" stroke-linecap="round"/>
-              <line x1="8" y1="18" x2="13" y2="18" :stroke="m.color" stroke-width="1.2" stroke-linecap="round"/>
-            </template>
-            <template v-if="m.key === 'stats'">
-              <path d="M18 20V10" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-              <path d="M12 20V4" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-              <path d="M6 20v-6" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-            </template>
-            <template v-if="m.key === 'reminder'">
-              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" :stroke="m.color" stroke-width="1.5"/>
-              <path d="M13.73 21a2 2 0 01-3.46 0" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-            </template>
-            <template v-if="m.key === 'theme'">
-              <circle cx="12" cy="12" r="5" :stroke="m.color" stroke-width="1.5"/>
-              <line x1="12" y1="1" x2="12" y2="3" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="12" y1="21" x2="12" y2="23" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="1" y1="12" x2="3" y2="12" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="21" y1="12" x2="23" y2="12" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-            </template>
-            <template v-if="m.key === 'about'">
-              <circle cx="12" cy="12" r="10" :stroke="m.color" stroke-width="1.5"/>
-              <line x1="12" y1="16" x2="12" y2="12" :stroke="m.color" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="12" y1="8" x2="12.01" y2="8" :stroke="m.color" stroke-width="2" stroke-linecap="round"/>
-            </template>
-            <template v-if="m.key === 'feedback'">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" :stroke="m.color" stroke-width="1.5"/>
-              <line x1="8" y1="8" x2="16" y2="8" :stroke="m.color" stroke-width="1.2" stroke-linecap="round"/>
-              <line x1="8" y1="12" x2="13" y2="12" :stroke="m.color" stroke-width="1.2" stroke-linecap="round"/>
-            </template>
-          </svg>
         </view>
         <text class="menu-label">{{ m.label }}</text>
         <view class="menu-arrow">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <polyline points="9,6 15,12 9,18" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <text style="font-size:24rpx;color:#ccc;">›</text>
         </view>
       </view>
     </view>
@@ -160,41 +98,73 @@
     <!-- 退出登录 -->
     <view class="logout-area" :class="{ show: loaded }">
       <button class="btn-logout" @tap="onLogout">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="#ff6b6b" stroke-width="1.5" stroke-linecap="round"/>
-          <polyline points="16,17 21,12 16,7" stroke="#ff6b6b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="21" y1="12" x2="9" y2="12" stroke="#ff6b6b" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-        <text>退出登录</text>
+        <text style="font-size:28rpx;color:#ff6b6b;">🚪 退出登录</text>
       </button>
     </view>
 
     <!-- 底部安全区域 -->
     <view class="safe-bottom"></view>
+
+    <!-- 编辑资料弹窗 -->
+    <view class="modal-mask" v-if="editVisible" @tap="editVisible = false">
+      <view class="modal-card" @tap.stop>
+        <text class="modal-title">编辑资料</text>
+        <view class="modal-input-group">
+          <text class="modal-label">昵称</text>
+          <input
+            class="modal-input"
+            v-model="editNickname"
+            placeholder="请输入昵称"
+            maxlength="50"
+            placeholder-class="modal-ph"
+          />
+        </view>
+        <view class="modal-actions">
+          <button class="modal-btn cancel" @tap="editVisible = false">取消</button>
+          <button class="modal-btn confirm" :class="{ loading: saving }" :disabled="saving" @tap="saveProfile">
+            {{ saving ? '保存中...' : '保存' }}
+          </button>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { getUserInfo, logout as apiLogout } from '../../utils/api.js'
+import { ref, onMounted, nextTick } from 'vue'
+import { getUserInfo, logout as apiLogout, uploadAvatar, updateProfile, deleteAccount, BASE_URL } from '../../utils/api.js'
 
 const loaded = ref(false)
-const userInfo = ref({ nickname: '', email: '', uid: '' })
+const uploading = ref(false)
+const editVisible = ref(false)
+const editNickname = ref('')
+const saving = ref(false)
+const avatarKey = ref(0)
+const userInfo = ref({ nickname: '', phone: '', uid: '', avatarUrl: '', weeklyHours: null })
 
-const stats = [
-  { key: 'plans', value: '36', label: '完成计划', bg: 'rgba(79,172,254,0.1)', color: '#4facfe' },
-  { key: 'days', value: '28', label: '活跃天数', bg: 'rgba(107,203,119,0.1)', color: '#6bcb77' },
-  { key: 'streak', value: '7', label: '连续打卡', bg: 'rgba(255,165,0,0.1)', color: '#ffa500' },
-  { key: 'hours', value: '42h', label: '学习时长', bg: 'rgba(123,109,240,0.1)', color: '#7b6df0' }
-]
+function fixAvatarUrl(url) {
+  if (!url) return ''
+  // 把服务器返回的主机替换为客户端 BASE_URL
+  return url.replace(/^https?:\/\/[^\/]+/, BASE_URL)
+}
+
+const stats = ref([
+  { key: 'hours', value: '-', label: '每周投入', bg: 'rgba(79,172,254,0.1)', color: '#4facfe' },
+  { key: 'plans', value: '-', label: '完成计划', bg: 'rgba(107,203,119,0.1)', color: '#6bcb77' },
+  { key: 'streak', value: '-', label: '连续打卡', bg: 'rgba(255,165,0,0.1)', color: '#ffa500' },
+  { key: 'days', value: '-', label: '活跃天数', bg: 'rgba(123,109,240,0.1)', color: '#7b6df0' }
+])
 
 const menus = [
   { key: 'plan', label: '我的计划', bg: 'rgba(79,172,254,0.1)', color: '#4facfe' },
+  { key: 'tasks', label: '我的任务', bg: 'rgba(123,109,240,0.1)', color: '#7b6df0' },
+  { key: 'notifications', label: '通知中心', bg: 'rgba(255,165,0,0.1)', color: '#ffa500' },
   { key: 'stats', label: '数据统计', bg: 'rgba(107,203,119,0.1)', color: '#6bcb77' },
   { key: 'reminder', label: '提醒设置', bg: 'rgba(255,165,0,0.1)', color: '#ffa500' },
   { key: 'feedback', label: '意见反馈', bg: 'rgba(123,109,240,0.1)', color: '#7b6df0' },
   { key: 'theme', label: '主题设置', bg: 'rgba(255,107,107,0.1)', color: '#ff6b6b' },
-  { key: 'about', label: '关于我们', bg: 'rgba(0,242,254,0.1)', color: '#00c6fb' }
+  { key: 'about', label: '关于我们', bg: 'rgba(0,242,254,0.1)', color: '#00c6fb' },
+  { key: 'delete', label: '注销账号', bg: 'rgba(255,107,107,0.06)', color: '#ff6b6b' }
 ]
 
 async function loadUserInfo() {
@@ -202,26 +172,27 @@ async function loadUserInfo() {
     const res = await getUserInfo()
     userInfo.value = {
       nickname: res.nickname || 'REDSPIDER用户',
-      email: res.phone || uni.getStorageSync('uid') || '',
-      uid: res.uid || ''
+      phone: res.phone || '',
+      uid: res.uid || '',
+      avatarUrl: fixAvatarUrl(res.avatarUrl),
+      weeklyHours: res.weeklyHours
     }
+    stats.value[0].value = res.weeklyHours != null ? res.weeklyHours + 'h' : '-'
     uni.setStorageSync('userInfo', JSON.stringify(userInfo.value))
   } catch (e) {
-    // 如果接口失败，读本地缓存
     const info = uni.getStorageSync('userInfo')
     if (info) {
       try {
-        userInfo.value = typeof info === 'string' ? JSON.parse(info) : info
-      } catch(e2) {
-        userInfo.value = { nickname: '', email: '' }
-      }
+        const parsed = typeof info === 'string' ? JSON.parse(info) : info
+        userInfo.value = { ...userInfo.value, ...parsed }
+      } catch(e2) {}
     }
   }
 }
 
 onMounted(() => {
   loadUserInfo()
-  setTimeout(() => { loaded.value = true }, 80)
+  nextTick(() => { setTimeout(() => { loaded.value = true }, 50) })
 })
 
 function goBack() {
@@ -233,13 +204,62 @@ function goBack() {
   }
 }
 
+function chooseAvatar() {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    sourceType: ['album', 'camera'],
+    crop: { width: 300, height: 300 },
+    success: async (res) => {
+      const filePath = res.tempFilePaths[0]
+      uploading.value = true
+      try {
+        const profile = await uploadAvatar(filePath)
+        userInfo.value.avatarUrl = fixAvatarUrl(profile.avatarUrl)
+        avatarKey.value++
+        uni.showToast({ title: '头像已更新', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: e.message || '上传失败', icon: 'none' })
+      } finally {
+        uploading.value = false
+      }
+    }
+  })
+}
+
 function editProfile() {
-  uni.showToast({ title: '编辑资料功能开发中', icon: 'none' })
+  editNickname.value = userInfo.value.nickname === 'REDSPIDER用户' ? '' : userInfo.value.nickname
+  editVisible.value = true
+}
+
+async function saveProfile() {
+  const nickname = editNickname.value.trim()
+  if (!nickname) {
+    uni.showToast({ title: '昵称不能为空', icon: 'none' })
+    return
+  }
+  saving.value = true
+  try {
+    const res = await updateProfile({ nickname })
+    userInfo.value.nickname = res.nickname || nickname
+    editVisible.value = false
+    uni.showToast({ title: '已保存', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '保存失败', icon: 'none' })
+  } finally {
+    saving.value = false
+  }
 }
 
 function onMenu(key) {
   if (key === 'plan') {
     uni.navigateTo({ url: '/pages/plans/plans' })
+  } else if (key === 'tasks') {
+    uni.navigateTo({ url: '/pages/tasks/tasks' })
+  } else if (key === 'notifications') {
+    uni.navigateTo({ url: '/pages/notifications/notifications' })
+  } else if (key === 'delete') {
+    onDeleteAccount()
   } else {
     const labels = { stats: '数据统计', reminder: '提醒设置', feedback: '意见反馈', theme: '主题设置', about: '关于我们' }
     uni.showToast({ title: labels[key] + '功能开发中', icon: 'none' })
@@ -254,13 +274,32 @@ function onLogout() {
       if (res.confirm) {
         try {
           await apiLogout()
-        } catch (e) {
-          // 即使接口失败也清除本地状态
-        }
+        } catch (e) {}
         uni.showToast({ title: '已退出登录', icon: 'none' })
         setTimeout(() => {
           uni.reLaunch({ url: '/pages/index/index' })
         }, 800)
+      }
+    }
+  })
+}
+
+function onDeleteAccount() {
+  uni.showModal({
+    title: '注销账号',
+    content: '注销后账号将无法使用，确定要注销吗？',
+    confirmColor: '#ff6b6b',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await deleteAccount()
+          uni.showToast({ title: '账号已注销', icon: 'none' })
+          setTimeout(() => {
+            uni.reLaunch({ url: '/pages/index/index' })
+          }, 800)
+        } catch (e) {
+          uni.showToast({ title: e.message || '操作失败', icon: 'none' })
+        }
       }
     }
   })
@@ -350,7 +389,6 @@ function onLogout() {
   height: 64rpx;
   border-radius: 50%;
   background: rgba(255,255,255,0.7);
-  backdrop-filter: blur(10rpx);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -428,6 +466,28 @@ function onLogout() {
   justify-content: center;
   box-shadow: 0 8rpx 30rpx rgba(79,172,254,0.2);
   animation: avatarPulse 3s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+}
+
+.avatar-edit-hint {
+  position: absolute;
+  bottom: -4rpx;
+  right: -4rpx;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4facfe, #6cb4ee);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(79,172,254,0.3);
+  z-index: 2;
 }
 
 @keyframes avatarPulse {
@@ -499,7 +559,6 @@ function onLogout() {
   gap: 12rpx;
   margin: 40rpx 32rpx 0;
   background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(20rpx);
   border-radius: 28rpx;
   padding: 32rpx 16rpx;
   box-shadow: 0 8rpx 40rpx rgba(79,172,254,0.08);
@@ -519,12 +578,14 @@ function onLogout() {
   flex-direction: column;
   align-items: center;
   gap: 8rpx;
-  animation: fadeInUp 0.5s ease-out both;
+  opacity: 0;
+  transform: translateY(20rpx);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
 }
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20rpx); }
-  to { opacity: 1; transform: translateY(0); }
+.stat-item.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .stat-icon {
@@ -552,7 +613,6 @@ function onLogout() {
   position: relative;
   z-index: 1;
   background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(20rpx);
   border-radius: 28rpx;
   margin: 24rpx 32rpx 0;
   padding: 8rpx 0;
@@ -572,8 +632,14 @@ function onLogout() {
   display: flex;
   align-items: center;
   padding: 28rpx 32rpx;
-  transition: background 0.2s;
-  animation: fadeInUp 0.4s ease-out both;
+  transition: background 0.2s, opacity 0.4s ease-out, transform 0.4s ease-out;
+  opacity: 0;
+  transform: translateY(16rpx);
+}
+
+.menu-item.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .menu-item:active {
@@ -645,5 +711,110 @@ function onLogout() {
 
 .safe-bottom {
   height: 60rpx;
+}
+
+/* 编辑资料弹窗 */
+.modal-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-card {
+  width: 600rpx;
+  background: #fff;
+  border-radius: 32rpx;
+  padding: 48rpx 40rpx;
+  box-shadow: 0 16rpx 60rpx rgba(0,0,0,0.15);
+  animation: modalPop 0.25s ease-out;
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.9) translateY(20rpx); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #222;
+  text-align: center;
+  margin-bottom: 40rpx;
+}
+
+.modal-input-group {
+  margin-bottom: 40rpx;
+}
+
+.modal-label {
+  display: block;
+  font-size: 24rpx;
+  color: #888;
+  margin-bottom: 12rpx;
+}
+
+.modal-input {
+  width: 100%;
+  height: 88rpx;
+  background: #f5f3ff;
+  border-radius: 20rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  color: #333;
+  border: 1rpx solid transparent;
+  box-sizing: border-box;
+}
+
+.modal-input:focus {
+  border-color: rgba(123,109,240,0.3);
+  background: #fff;
+}
+
+.modal-ph {
+  color: #c8c0f0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 20rpx;
+}
+
+.modal-btn {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 44rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  border: none;
+}
+
+.modal-btn::after {
+  border: none;
+}
+
+.modal-btn.cancel {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.modal-btn.confirm {
+  background: linear-gradient(135deg, #4facfe, #6cb4ee);
+  color: #fff;
+}
+
+.modal-btn.loading {
+  opacity: 0.7;
 }
 </style>

@@ -1,0 +1,19 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/plans/plans",
+    "pages/login/login",
+    "pages/register/register",
+    "pages/forgot/forgot",
+    "pages/profile/profile",
+    "pages/tasks/tasks",
+    "pages/notifications/notifications"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "uni-app",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#F8F8F8"
+  },
+  "usingComponents": {}
+}

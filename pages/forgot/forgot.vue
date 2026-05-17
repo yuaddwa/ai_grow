@@ -25,34 +25,14 @@
 
     <!-- 返回按钮 -->
     <view class="back-btn" @tap="goBack">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <polyline points="15,18 9,12 15,6" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <text style="font-size:36rpx;color:#333;">‹</text>
     </view>
 
     <!-- 锁图标动画 -->
     <view class="lock-area" :class="{ show: loaded }">
       <view class="lock-glow"></view>
       <view class="lock-glow g2"></view>
-      <svg class="lock-icon" width="80" height="80" viewBox="0 0 80 80" fill="none">
-        <defs>
-          <linearGradient id="lockGrad" x1="20" y1="10" x2="60" y2="70" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#4facfe"/>
-            <stop offset="100%" stop-color="#00f2fe"/>
-          </linearGradient>
-        </defs>
-        <!-- 锁身 -->
-        <rect x="18" y="36" width="44" height="34" rx="8" fill="url(#lockGrad)" opacity="0.9">
-          <animate attributeName="opacity" values="0.9;0.7;0.9" dur="2s" repeatCount="indefinite"/>
-        </rect>
-        <!-- 锁梁 -->
-        <path d="M28 36V26a12 12 0 0124 0v10" stroke="#4facfe" stroke-width="3.5" stroke-linecap="round" fill="none">
-          <animate attributeName="opacity" values="1;0.6;1" dur="2.5s" repeatCount="indefinite"/>
-        </path>
-        <!-- 钥匙孔 -->
-        <circle cx="40" cy="50" r="5" fill="#fff" opacity="0.9"/>
-        <rect x="38" y="52" width="4" height="10" rx="2" fill="#fff" opacity="0.9"/>
-      </svg>
+      <text style="font-size:60rpx;color:#7b6df0;">🔒</text>
     </view>
 
     <!-- 步骤指示器 -->
@@ -92,10 +72,7 @@
 
         <view class="input-group">
           <view class="input-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="4" width="20" height="16" rx="3" stroke="#4facfe" stroke-width="1.5"/>
-              <path d="M2 7l10 6 10-6" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+            <text style="font-size:32rpx;color:#4facfe;">✉</text>
           </view>
           <input
             class="form-input"
@@ -108,10 +85,7 @@
 
         <view class="input-group code-group">
           <view class="input-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#4facfe" stroke-width="1.5"/>
-              <polyline points="9,12 11,14 15,10" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <text style="font-size:32rpx;color:#4facfe;">🛡️</text>
           </view>
           <input
             class="form-input"
@@ -144,10 +118,7 @@
 
         <view class="input-group">
           <view class="input-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="11" width="18" height="11" rx="2" stroke="#4facfe" stroke-width="1.5"/>
-              <path d="M7 11V7a5 5 0 0110 0v4" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+            <text style="font-size:32rpx;color:#4facfe;">🔒</text>
           </view>
           <input
             class="form-input"
@@ -157,24 +128,13 @@
             :password="!showPw"
           />
           <view class="toggle-pw" @tap="showPw = !showPw">
-            <svg v-if="!showPw" width="20" height="16" viewBox="0 0 22 16" fill="none">
-              <path d="M1 8s5-7 10-7 10 7 10 7-5 7-10 7S1 8 1 8z" stroke="#bbb" stroke-width="1.3"/>
-              <circle cx="11" cy="8" r="3" stroke="#bbb" stroke-width="1.3"/>
-            </svg>
-            <svg v-else width="20" height="16" viewBox="0 0 22 16" fill="none">
-              <path d="M1 8s5-7 10-7 10 7 10 7-5 7-10 7S1 8 1 8z" stroke="#4facfe" stroke-width="1.3"/>
-              <circle cx="11" cy="8" r="3" stroke="#4facfe" stroke-width="1.3"/>
-            </svg>
+            <text style="font-size:24rpx;color:#bbb;">{{ showPw ? '隐藏' : '显示' }}</text>
           </view>
         </view>
 
         <view class="input-group">
           <view class="input-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="11" width="18" height="11" rx="2" stroke="#4facfe" stroke-width="1.5"/>
-              <path d="M7 11V7a5 5 0 0110 0v4" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-              <polyline points="9,16 11,18 15,14" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <text style="font-size:32rpx;color:#4facfe;">🔒</text>
           </view>
           <input
             class="form-input"
@@ -184,14 +144,7 @@
             :password="!showPw2"
           />
           <view class="toggle-pw" @tap="showPw2 = !showPw2">
-            <svg v-if="!showPw2" width="20" height="16" viewBox="0 0 22 16" fill="none">
-              <path d="M1 8s5-7 10-7 10 7 10 7-5 7-10 7S1 8 1 8z" stroke="#bbb" stroke-width="1.3"/>
-              <circle cx="11" cy="8" r="3" stroke="#bbb" stroke-width="1.3"/>
-            </svg>
-            <svg v-else width="20" height="16" viewBox="0 0 22 16" fill="none">
-              <path d="M1 8s5-7 10-7 10 7 10 7-5 7-10 7S1 8 1 8z" stroke="#4facfe" stroke-width="1.3"/>
-              <circle cx="11" cy="8" r="3" stroke="#4facfe" stroke-width="1.3"/>
-            </svg>
+            <text style="font-size:24rpx;color:#bbb;">{{ showPw2 ? '隐藏' : '显示' }}</text>
           </view>
         </view>
 
@@ -211,15 +164,7 @@
       <!-- 第三步：成功 -->
       <view class="step-content success-content" :class="{ active: step === 3 }" v-if="step === 3">
         <view class="success-icon" :class="{ show: successShow }">
-          <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
-            <circle cx="50" cy="50" r="45" stroke="#4facfe" stroke-width="2" fill="rgba(79,172,254,0.08)">
-              <animate attributeName="r" values="42;45;42" dur="2s" repeatCount="indefinite"/>
-            </circle>
-            <circle cx="50" cy="50" r="35" stroke="#00f2fe" stroke-width="1.5" fill="none" opacity="0.4">
-              <animate attributeName="r" values="35;38;35" dur="2.5s" repeatCount="indefinite"/>
-            </circle>
-            <polyline points="32,52 45,65 70,38" stroke="#4facfe" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none" class="check-line"/>
-          </svg>
+          <text style="font-size:80rpx;color:#6bcb77;">✔</text>
         </view>
         <text class="success-title">重置成功</text>
         <text class="success-desc">密码已重置，请使用新密码登录</text>
@@ -238,7 +183,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { sendResetCode, resetPassword as apiResetPassword } from '../../utils/api.js'
 
 const loaded = ref(false)
@@ -256,7 +201,7 @@ const form = ref({
   confirmPassword: ''
 })
 
-setTimeout(() => { loaded.value = true }, 80)
+onMounted(() => { nextTick(() => { setTimeout(() => { loaded.value = true }, 50) }) })
 
 const canVerify = computed(() => {
   return form.value.email && form.value.code && !submitting.value
@@ -446,7 +391,6 @@ function goBack() {
   height: 64rpx;
   border-radius: 50%;
   background: rgba(255,255,255,0.7);
-  backdrop-filter: blur(10rpx);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -580,7 +524,6 @@ function goBack() {
 /* 表单卡片 */
 .form-card {
   background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20rpx);
   border-radius: 32rpx;
   padding: 48rpx 36rpx;
   margin: 0 32rpx;
@@ -597,12 +540,14 @@ function goBack() {
 }
 
 .step-content {
-  animation: fadeInUp 0.4s ease-out;
+  opacity: 0;
+  transform: translateY(30rpx);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
 }
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(30rpx); }
-  to { opacity: 1; transform: translateY(0); }
+.step-content.active {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .step-title {
@@ -634,12 +579,6 @@ function goBack() {
   margin-bottom: 24rpx;
   border: 1rpx solid transparent;
   transition: all 0.3s;
-}
-
-.input-group:focus-within {
-  border-color: rgba(79, 172, 254, 0.4);
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(79, 172, 254, 0.1);
 }
 
 .code-group {
@@ -771,16 +710,6 @@ function goBack() {
 .success-icon.show {
   opacity: 1;
   transform: scale(1);
-}
-
-.check-line {
-  stroke-dasharray: 60;
-  stroke-dashoffset: 60;
-  animation: drawCheck 0.6s ease-out 0.3s forwards;
-}
-
-@keyframes drawCheck {
-  to { stroke-dashoffset: 0; }
 }
 
 .success-title {

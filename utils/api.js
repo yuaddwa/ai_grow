@@ -114,6 +114,66 @@ function refreshToken() {
 
 // ============ 业务接口 ============
 
+// 更新用户资料
+export function updateProfile(data) {
+  return request({
+    url: '/api/v1/users/me',
+    method: 'PATCH',
+    data,
+    auth: true
+  })
+}
+
+// 上传头像（multipart）
+export function uploadAvatar(filePath) {
+  return new Promise((resolve, reject) => {
+    const token = getAccessToken()
+    uni.uploadFile({
+      url: BASE_URL + '/api/v1/users/me/avatar',
+      filePath,
+      name: 'file',
+      header: { 'Authorization': 'Bearer ' + token },
+      success: (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try {
+            resolve(JSON.parse(res.data))
+          } catch (e) {
+            reject({ code: 'ERROR', message: '响应解析失败' })
+          }
+        } else {
+          try {
+            reject(JSON.parse(res.data))
+          } catch (e) {
+            reject({ code: 'ERROR', message: '上传失败(' + res.statusCode + ')' })
+          }
+        }
+      },
+      fail: () => reject({ code: 'NETWORK_ERROR', message: '上传失败' })
+    })
+  })
+}
+
+// 更新首次画像
+export function updateOnboarding(data) {
+  return request({
+    url: '/api/v1/users/me/onboarding',
+    method: 'PATCH',
+    data,
+    auth: true
+  })
+}
+
+// 注销账号（软删除）
+export function deleteAccount() {
+  return request({
+    url: '/api/v1/users/me',
+    method: 'DELETE',
+    auth: true
+  }).finally(() => {
+    clearTokens()
+  })
+}
+
 // 登录
 export function login(account, password) {
   return request({
@@ -190,6 +250,31 @@ export function changePassword(oldPassword, newPassword) {
 }
 
 // ============ AI 对话 ============
+
+// 语音转文字
+export function transcribeAudio(filePath) {
+  return new Promise((resolve, reject) => {
+    const token = getAccessToken()
+    uni.uploadFile({
+      url: BASE_URL + '/api/v1/speech/transcribe',
+      filePath,
+      name: 'file',
+      header: { 'Authorization': 'Bearer ' + token },
+      success: (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try { resolve(JSON.parse(res.data)) }
+          catch (e) { reject({ code: 'ERROR', message: '响应解析失败' }) }
+        } else if (res.statusCode === 401) {
+          reject({ code: 'UNAUTHORIZED', message: '登录已过期' })
+        } else {
+          try { reject(JSON.parse(res.data)) }
+          catch (e) { reject({ code: 'ERROR', message: '语音识别失败(' + res.statusCode + ')' }) }
+        }
+      },
+      fail: () => reject({ code: 'NETWORK_ERROR', message: '上传失败' })
+    })
+  })
+}
 
 // 发送对话消息
 export function sendChatMessage(message, sessionId, provider) {

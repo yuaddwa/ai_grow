@@ -9,16 +9,11 @@
     <!-- 导航栏 -->
     <view class="nav-bar">
       <view class="nav-back" @tap="goBack">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <polyline points="15,18 9,12 15,6" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <text style="font-size:36rpx;color:#333;">‹</text>
       </view>
       <text class="nav-title">我的计划</text>
       <view class="nav-add" @tap="addPlan">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <line x1="12" y1="5" x2="12" y2="19" stroke="#4facfe" stroke-width="2" stroke-linecap="round"/>
-          <line x1="5" y1="12" x2="19" y2="12" stroke="#4facfe" stroke-width="2" stroke-linecap="round"/>
-        </svg>
+        <text style="font-size:36rpx;color:#4facfe;">＋</text>
       </view>
     </view>
 
@@ -27,15 +22,11 @@
       <!-- 月份切换 -->
       <view class="month-row">
         <view class="month-arrow" @tap="prevMonth">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <polyline points="15,18 9,12 15,6" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <text style="font-size:32rpx;color:#333;">‹</text>
         </view>
         <text class="month-title">{{ curYear }}年{{ curMonth }}月</text>
         <view class="month-arrow" @tap="nextMonth">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <polyline points="9,6 15,12 9,18" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <text style="font-size:32rpx;color:#333;">›</text>
         </view>
       </view>
 
@@ -76,37 +67,26 @@
         v-for="(p, pi) in selectedPlans"
         :key="p.id"
         class="plan-card"
-        :style="{ animationDelay: (pi * 0.08) + 's' }"
+        :class="{ show: loaded }" :style="{ transitionDelay: (pi * 0.08) + 's' }"
       >
         <view class="plan-left">
           <view class="plan-color-bar" :style="{ background: p.color }"></view>
           <view class="plan-info">
             <text class="plan-name" :class="{ done: p.done }">{{ p.name }}</text>
             <view class="plan-meta">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="9" stroke="#bbb" stroke-width="1.5"/>
-                <line x1="12" y1="7" x2="12" y2="12" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-                <line x1="12" y1="12" x2="16" y2="14" stroke="#bbb" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
+              <text style="font-size:22rpx;">⏰</text>
               <text class="plan-time">{{ p.time }}</text>
             </view>
           </view>
         </view>
         <view class="plan-check" :class="{ done: p.done }" @tap="toggleDone(p)">
-          <svg v-if="p.done" width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <polyline points="20,6 9,17 4,12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <text v-if="p.done" style="font-size:28rpx;color:#fff;">✔</text>
         </view>
       </view>
 
       <!-- 空状态 -->
       <view class="empty" v-if="selectedPlans.length === 0">
-        <svg width="60" height="60" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="4" width="18" height="18" rx="2" stroke="#d4ecff" stroke-width="1.2"/>
-          <line x1="3" y1="10" x2="21" y2="10" stroke="#d4ecff" stroke-width="1.2"/>
-          <line x1="8" y1="2" x2="8" y2="6" stroke="#d4ecff" stroke-width="1.2" stroke-linecap="round"/>
-          <line x1="16" y1="2" x2="16" y2="6" stroke="#d4ecff" stroke-width="1.2" stroke-linecap="round"/>
-        </svg>
+        <text style="font-size:60rpx;opacity:0.3;">📅</text>
         <text class="empty-text">这一天还没有计划</text>
         <text class="empty-sub">点击右上角 + 添加</text>
       </view>
@@ -115,7 +95,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 
 const loaded = ref(false)
 const weeks = ['日', '一', '二', '三', '四', '五', '六']
@@ -125,7 +105,7 @@ const curYear = ref(today.getFullYear())
 const curMonth = ref(today.getMonth() + 1)
 const selectedDate = ref(formatDate(today))
 
-setTimeout(() => { loaded.value = true }, 80)
+onMounted(() => { nextTick(() => { setTimeout(() => { loaded.value = true }, 50) }) })
 
 function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -268,15 +248,6 @@ function addPlan() {
   50% { transform: translateY(16rpx); }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20rpx); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
-}
 
 /* 导航栏 */
 .nav-bar {
@@ -321,7 +292,9 @@ function addPlan() {
 }
 
 .calendar-card.show {
-  animation: slideIn 0.5s ease-out 0.1s both;
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.5s ease-out 0.1s, transform 0.5s ease-out 0.1s;
 }
 
 /* 月份切换 */
@@ -458,12 +431,19 @@ function addPlan() {
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
-  animation: fadeIn 0.3s ease-out both;
-  transition: transform 0.15s;
+  opacity: 0;
+  transform: translateY(12rpx);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.plan-card.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .plan-card:active {
   transform: scale(0.98);
+  transition: opacity 0.3s ease-out, transform 0.15s;
 }
 
 .plan-left {

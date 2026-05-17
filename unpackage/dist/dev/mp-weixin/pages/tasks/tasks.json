@@ -1,0 +1,6 @@
+{
+  "navigationStyle": "custom",
+  "navigationBarTitleText": "我的任务",
+  "enablePullDownRefresh": true,
+  "usingComponents": {}
+}

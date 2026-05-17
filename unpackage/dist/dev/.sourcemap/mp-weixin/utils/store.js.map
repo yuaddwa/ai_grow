@@ -1,0 +1,1 @@
+{"version":3,"file":"store.js","sources":["utils/store.js"],"sourcesContent":["import { reactive } from 'vue'\nexport const store = reactive({ unreadCount: 0 })\n"],"names":["reactive"],"mappings":";;AACY,MAAC,QAAQA,cAAQ,SAAC,EAAE,aAAa,EAAG,CAAA;;"}

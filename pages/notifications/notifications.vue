@@ -11,9 +11,7 @@
 
     <!-- 返回按钮 -->
     <view class="back-btn" @tap="goBack">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <polyline points="15,18 9,12 15,6" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <text style="font-size:36rpx;color:#333;">‹</text>
     </view>
 
     <!-- 头部 -->
@@ -24,10 +22,7 @@
           <text class="subtitle">查看所有消息提醒</text>
         </view>
         <view class="read-all-btn" @tap="onReadAll" v-if="notifications.length > 0">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M9 11l3 3L22 4" stroke="#4facfe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="#4facfe" stroke-width="1.5"/>
-          </svg>
+          <text style="font-size:26rpx;color:#4facfe;">✔</text>
           <text>全部已读</text>
         </view>
       </view>
@@ -36,10 +31,7 @@
     <!-- 通知列表 -->
     <scroll-view class="notify-scroll" scroll-y :refresher-enabled="true" :refresher-triggered="refreshing" @refresherrefresh="onRefresh">
       <view v-if="notifications.length === 0 && !loading" class="empty-state">
-        <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
-          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#d4ecff" stroke-width="1.2"/>
-          <path d="M13.73 21a2 2 0 01-3.46 0" stroke="#d4ecff" stroke-width="1.2" stroke-linecap="round"/>
-        </svg>
+        <text style="font-size:80rpx;opacity:0.3;">📋</text>
         <text class="empty-text">暂无通知</text>
         <text class="empty-sub">有新消息时会在这里提醒你</text>
       </view>
@@ -49,22 +41,14 @@
         v-for="(item, i) in notifications"
         :key="item.id"
         :class="{ unread: !item.readAt }"
-        :style="{ animationDelay: (i * 0.06) + 's' }"
+        :class="{ show: loaded }"
+        :style="{ transitionDelay: (i * 0.06) + 's' }"
         @tap="onTapNotify(item)"
       >
         <view class="notify-dot" v-if="!item.readAt"></view>
         <view class="notify-icon" :class="iconClass(item.type)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <template v-if="item.type === 'TASK_DUE_REMINDER'">
-              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </template>
-            <template v-else>
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="12" y1="8" x2="12.01" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </template>
-          </svg>
+          <text v-if="item.type === 'TASK_DUE_REMINDER'" style="font-size:32rpx;">🔔</text>
+          <text v-else style="font-size:32rpx;">ℹ️</text>
         </view>
         <view class="notify-body">
           <text class="notify-title">{{ item.title }}</text>
@@ -77,7 +61,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../utils/api.js'
 import { store } from '../../utils/store.js'
 
@@ -86,7 +70,7 @@ const loading = ref(false)
 const refreshing = ref(false)
 const notifications = ref([])
 
-setTimeout(() => { loaded.value = true }, 80)
+onMounted(() => { nextTick(() => { setTimeout(() => { loaded.value = true }, 50) }) })
 
 onMounted(() => { loadNotifications() })
 
@@ -188,16 +172,16 @@ function formatTime(dateStr) {
 .back-btn {
   position: absolute; top: 100rpx; left: 32rpx; z-index: 10;
   width: 64rpx; height: 64rpx; border-radius: 50%;
-  background: rgba(255,255,255,0.7); backdrop-filter: blur(10rpx);
+  background: rgba(255,255,255,0.7);
   display: flex; align-items: center; justify-content: center;
 }
 
 /* 头部 */
 .header {
   position: relative; z-index: 1;
-  padding: 120rpx 48rpx 20rpx;
+  padding: 120rpx 48rpx 20rpx 112rpx;
   opacity: 0; transform: translateY(30rpx);
-  transition: all 0.6s ease-out;
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 .header.show { opacity: 1; transform: translateY(0); }
 .header-row { display: flex; align-items: flex-start; justify-content: space-between; }
@@ -230,21 +214,18 @@ function formatTime(dateStr) {
 /* 通知卡片 */
 .notify-card {
   display: flex; gap: 16rpx; padding: 24rpx; position: relative;
-  background: rgba(255,255,255,0.92); backdrop-filter: blur(20rpx);
+  background: rgba(255,255,255,0.92);
   border-radius: 20rpx; margin-bottom: 14rpx;
   box-shadow: 0 2rpx 16rpx rgba(255,165,0,0.05);
   border: 1rpx solid rgba(255,255,255,0.6);
-  animation: fadeInUp 0.35s ease-out both;
-  transition: transform 0.2s;
+  opacity: 0; transform: translateY(16rpx);
+  transition: opacity 0.35s ease-out, transform 0.35s ease-out;
 }
+.notify-card.show { opacity: 1; transform: translateY(0); }
 .notify-card:active { transform: scale(0.98); }
 .notify-card.unread {
   border-left: 6rpx solid #ffa500;
 }
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16rpx); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .notify-dot {

@@ -11,9 +11,7 @@
 
     <!-- 返回按钮 -->
     <view class="back-btn" @tap="goBack">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <polyline points="15,18 9,12 15,6" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <text style="font-size:36rpx;color:#333;">‹</text>
     </view>
 
     <!-- 内容区 -->
@@ -29,10 +27,7 @@
         <!-- 邮箱 -->
         <view class="input-group">
           <view class="input-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="4" width="20" height="16" rx="3" stroke="#4facfe" stroke-width="1.5"/>
-              <path d="M2 7l10 6 10-6" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+            <text style="font-size:32rpx;color:#4facfe;">✉</text>
           </view>
           <input
             class="form-input"
@@ -46,10 +41,7 @@
         <!-- 验证码 -->
         <view class="input-group code-group">
           <view class="input-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#4facfe" stroke-width="1.5"/>
-              <polyline points="9,12 11,14 15,10" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <text style="font-size:32rpx;color:#4facfe;">🛡️</text>
           </view>
           <input
             class="form-input"
@@ -71,10 +63,7 @@
         <!-- 密码 -->
         <view class="input-group">
           <view class="input-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="11" width="18" height="11" rx="2" stroke="#4facfe" stroke-width="1.5"/>
-              <path d="M7 11V7a5 5 0 0110 0v4" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+            <text style="font-size:32rpx;color:#4facfe;">🔒</text>
           </view>
           <input
             class="form-input"
@@ -84,24 +73,14 @@
             :password="!showPw"
           />
           <view class="toggle-pw" @tap="showPw = !showPw">
-            <svg v-if="!showPw" width="20" height="16" viewBox="0 0 22 16" fill="none">
-              <path d="M1 8s5-7 10-7 10 7 10 7-5 7-10 7S1 8 1 8z" stroke="#bbb" stroke-width="1.3"/>
-              <circle cx="11" cy="8" r="3" stroke="#bbb" stroke-width="1.3"/>
-            </svg>
-            <svg v-else width="20" height="16" viewBox="0 0 22 16" fill="none">
-              <path d="M1 8s5-7 10-7 10 7 10 7-5 7-10 7S1 8 1 8z" stroke="#4facfe" stroke-width="1.3"/>
-              <circle cx="11" cy="8" r="3" stroke="#4facfe" stroke-width="1.3"/>
-            </svg>
+            <text style="font-size:24rpx;color:#bbb;">{{ showPw ? '隐藏' : '显示' }}</text>
           </view>
         </view>
 
         <!-- 昵称 -->
         <view class="input-group">
           <view class="input-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="8" r="4" stroke="#4facfe" stroke-width="1.5"/>
-              <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+            <text style="font-size:32rpx;color:#4facfe;">👤</text>
           </view>
           <input
             class="form-input"
@@ -131,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { sendRegisterCode, register } from '../../utils/api.js'
 
 const loaded = ref(false)
@@ -145,7 +124,7 @@ const canRegister = computed(() => {
   return form.value.email && form.value.code && form.value.password && form.value.nickname && !submitting.value
 })
 
-setTimeout(() => { loaded.value = true }, 80)
+onMounted(() => { nextTick(() => { setTimeout(() => { loaded.value = true }, 50) }) })
 
 async function sendCode() {
   if (!form.value.email) {
@@ -280,27 +259,24 @@ function goBack() {
   height: 64rpx;
   border-radius: 50%;
   background: rgba(255,255,255,0.7);
-  backdrop-filter: blur(10rpx);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 /* 内容入场动画 */
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(60rpx); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 .content {
   position: relative;
   z-index: 1;
   padding: 180rpx 48rpx 60rpx;
   opacity: 0;
+  transform: translateY(60rpx);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 
 .content.show {
-  animation: slideUp 0.6s ease-out both;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .title-area {
@@ -325,7 +301,6 @@ function goBack() {
 /* 表单卡片 */
 .form-card {
   background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20rpx);
   border-radius: 32rpx;
   padding: 40rpx 36rpx;
   box-shadow: 0 8rpx 40rpx rgba(123, 109, 240, 0.1);
@@ -342,12 +317,6 @@ function goBack() {
   margin-bottom: 24rpx;
   border: 1rpx solid transparent;
   transition: all 0.3s;
-}
-
-.input-group:focus-within {
-  border-color: rgba(123, 109, 240, 0.3);
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(123, 109, 240, 0.08);
 }
 
 .code-group {

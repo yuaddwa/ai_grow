@@ -50,72 +50,7 @@
       <view class="splash-center" :class="{ show: splashReady }">
         <view class="robot-glow"></view>
         <view class="robot-glow g2"></view>
-        <svg class="splash-robot" width="140" height="160" viewBox="0 0 140 160" fill="none">
-          <defs>
-            <radialGradient id="bodyGrad" cx="50%" cy="40%" r="50%">
-              <stop offset="0%" stop-color="#f0f4f8"/>
-              <stop offset="100%" stop-color="#d8e2ec"/>
-            </radialGradient>
-            <radialGradient id="headGrad" cx="50%" cy="35%" r="55%">
-              <stop offset="0%" stop-color="#f5f8fc"/>
-              <stop offset="100%" stop-color="#dde5ef"/>
-            </radialGradient>
-          </defs>
-
-          <!-- 底座光环 -->
-          <ellipse cx="70" cy="148" rx="40" ry="8" fill="rgba(79,172,254,0.15)"/>
-          <ellipse cx="70" cy="148" rx="28" ry="5" fill="rgba(79,172,254,0.25)"/>
-
-          <!-- 身体 -->
-          <rect x="40" y="92" width="60" height="50" rx="22" fill="url(#bodyGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
-          <!-- 身体蓝光条 -->
-          <rect x="52" y="102" width="36" height="3" rx="1.5" fill="#4facfe" opacity="0.7">
-            <animate attributeName="opacity" values="0.7;0.3;0.7" dur="2s" repeatCount="indefinite"/>
-          </rect>
-          <rect x="58" y="108" width="24" height="2" rx="1" fill="#4facfe" opacity="0.4">
-            <animate attributeName="opacity" values="0.4;0.15;0.4" dur="2s" begin="0.3s" repeatCount="indefinite"/>
-          </rect>
-          <!-- 胸口圆形 -->
-          <circle cx="70" cy="120" r="6" fill="none" stroke="#4facfe" stroke-width="1" opacity="0.5"/>
-          <circle cx="70" cy="120" r="3" fill="#4facfe" opacity="0.6">
-            <animate attributeName="opacity" values="0.6;0.2;0.6" dur="1.5s" repeatCount="indefinite"/>
-          </circle>
-
-          <!-- 左臂 -->
-          <rect x="26" y="98" width="14" height="36" rx="7" fill="url(#bodyGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
-          <!-- 右臂 -->
-          <rect x="100" y="98" width="14" height="36" rx="7" fill="url(#bodyGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
-
-          <!-- 头部 -->
-          <ellipse cx="70" cy="58" rx="44" ry="40" fill="url(#headGrad)" stroke="#c8d6e5" stroke-width="0.8"/>
-
-          <!-- 耳朵 -->
-          <rect x="20" y="48" width="10" height="18" rx="5" fill="#e0e8f0" stroke="#c8d6e5" stroke-width="0.8"/>
-          <rect x="110" y="48" width="10" height="18" rx="5" fill="#e0e8f0" stroke="#c8d6e5" stroke-width="0.8"/>
-
-          <!-- 天线 -->
-          <line x1="70" y1="18" x2="70" y2="26" stroke="#b8c8d8" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="70" cy="15" r="4" fill="#4facfe" opacity="0.8">
-            <animate attributeName="r" values="3;4.5;3" dur="1.5s" repeatCount="indefinite"/>
-            <animate attributeName="opacity" values="0.8;0.4;0.8" dur="1.5s" repeatCount="indefinite"/>
-          </circle>
-
-          <!-- 脸部 - 黑色显示屏 -->
-          <rect x="38" y="40" width="64" height="42" rx="14" fill="#0a0e14" stroke="#1a2030" stroke-width="1"/>
-
-          <!-- 眼睛 - 弯曲线条 -->
-          <path d="M46 58 Q55 52 64 58" stroke="#4facfe" stroke-width="3" stroke-linecap="round" fill="none">
-            <animate attributeName="opacity" values="1;0.5;1" dur="3s" repeatCount="indefinite"/>
-          </path>
-          <path d="M76 58 Q85 52 94 58" stroke="#4facfe" stroke-width="3" stroke-linecap="round" fill="none">
-            <animate attributeName="opacity" values="1;0.5;1" dur="3s" repeatCount="indefinite"/>
-          </path>
-
-          <!-- 嘴巴 - 微笑弧线 -->
-          <path d="M62 69 Q70 75 78 69" stroke="#4facfe" stroke-width="2.5" stroke-linecap="round" fill="none">
-            <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite"/>
-          </path>
-        </svg>
+        <text class="splash-robot" style="font-size:140rpx;">🤖</text>
       </view>
 
       <!-- 标题文字（逐字动画） -->
@@ -136,14 +71,8 @@
 
       <!-- 底部波浪 -->
       <view class="wave-wrap" :class="{ show: waveShow }">
-        <svg class="wave-svg" viewBox="0 0 750 120" preserveAspectRatio="none">
-          <path d="M0,60 C150,20 350,100 750,60 L750,120 L0,120 Z" fill="rgba(79,172,254,0.06)">
-            <animate attributeName="d" values="M0,60 C150,20 350,100 750,60 L750,120 L0,120 Z;M0,60 C150,100 350,20 750,60 L750,120 L0,120 Z;M0,60 C150,20 350,100 750,60 L750,120 L0,120 Z" dur="3s" repeatCount="indefinite"/>
-          </path>
-          <path d="M0,80 C200,40 400,100 750,80 L750,120 L0,120 Z" fill="rgba(79,172,254,0.04)">
-            <animate attributeName="d" values="M0,80 C200,40 400,100 750,80 L750,120 L0,120 Z;M0,80 C200,100 400,40 750,80 L750,120 L0,120 Z;M0,80 C200,40 400,100 750,80 L750,120 L0,120 Z" dur="4s" repeatCount="indefinite"/>
-          </path>
-        </svg>
+        <view class="wave wave1"></view>
+        <view class="wave wave2"></view>
       </view>
     </view>
 
@@ -159,10 +88,7 @@
       <view class="form-card">
         <view class="input-group">
           <view class="input-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="4" width="20" height="16" rx="3" stroke="#4facfe" stroke-width="1.5"/>
-              <path d="M2 7l10 6 10-6" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+            <text style="font-size:32rpx;color:#4facfe;">✉</text>
           </view>
           <input
             class="form-input"
@@ -175,10 +101,7 @@
 
         <view class="input-group">
           <view class="input-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="11" width="18" height="11" rx="2" stroke="#4facfe" stroke-width="1.5"/>
-              <path d="M7 11V7a5 5 0 0110 0v4" stroke="#4facfe" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+            <text style="font-size:32rpx;color:#4facfe;">🔒</text>
           </view>
           <input
             class="form-input"
@@ -188,14 +111,7 @@
             :password="!showPw"
           />
           <view class="toggle-pw" @tap="showPw = !showPw">
-            <svg v-if="!showPw" width="20" height="16" viewBox="0 0 22 16" fill="none">
-              <path d="M1 8s5-7 10-7 10 7 10 7-5 7-10 7S1 8 1 8z" stroke="#bbb" stroke-width="1.3"/>
-              <circle cx="11" cy="8" r="3" stroke="#bbb" stroke-width="1.3"/>
-            </svg>
-            <svg v-else width="20" height="16" viewBox="0 0 22 16" fill="none">
-              <path d="M1 8s5-7 10-7 10 7 10 7-5 7-10 7S1 8 1 8z" stroke="#4facfe" stroke-width="1.3"/>
-              <circle cx="11" cy="8" r="3" stroke="#4facfe" stroke-width="1.3"/>
-            </svg>
+            <text style="font-size:24rpx;color:#bbb;">{{ showPw ? '隐藏' : '显示' }}</text>
           </view>
         </view>
 
@@ -291,7 +207,7 @@ async function onLogin() {
   try {
     const res = await login(loginForm.value.email, loginForm.value.password)
     uni.showToast({ title: '登录成功', icon: 'success' })
-    setTimeout(() => uni.navigateBack(), 1000)
+    setTimeout(() => uni.reLaunch({ url: '/pages/index/index' }), 1000)
   } catch (e) {
     uni.showToast({ title: e.message || '登录失败', icon: 'none' })
   } finally {
@@ -702,21 +618,49 @@ function onForgotPw() {
   height: 100%;
 }
 
-/* 内容入场动画 */
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(60rpx); }
-  to { opacity: 1; transform: translateY(0); }
+.wave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  height: 120rpx;
+  border-radius: 50% 50% 0 0;
 }
 
+.wave1 {
+  background: rgba(79,172,254,0.06);
+  animation: waveMove1 3s ease-in-out infinite;
+}
+
+.wave2 {
+  background: rgba(79,172,254,0.04);
+  animation: waveMove2 4s ease-in-out infinite;
+  bottom: -10rpx;
+}
+
+@keyframes waveMove1 {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-25%); }
+}
+
+@keyframes waveMove2 {
+  0%, 100% { transform: translateX(-25%); }
+  50% { transform: translateX(0); }
+}
+
+/* 内容入场动画 */
 .content {
   position: relative;
   z-index: 1;
   padding: 160rpx 48rpx 60rpx;
   opacity: 0;
+  transform: translateY(60rpx);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 
 .content.show {
-  animation: slideUp 0.6s ease-out both;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .title-area {
@@ -741,7 +685,6 @@ function onForgotPw() {
 /* 表单卡片 */
 .form-card {
   background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20rpx);
   border-radius: 32rpx;
   padding: 40rpx 36rpx;
   box-shadow: 0 8rpx 40rpx rgba(79, 172, 254, 0.12);
@@ -758,12 +701,6 @@ function onForgotPw() {
   margin-bottom: 24rpx;
   border: 1rpx solid transparent;
   transition: all 0.3s;
-}
-
-.input-group:focus-within {
-  border-color: rgba(79, 172, 254, 0.4);
-  background: #fff;
-  box-shadow: 0 4rpx 16rpx rgba(79, 172, 254, 0.1);
 }
 
 .input-icon {

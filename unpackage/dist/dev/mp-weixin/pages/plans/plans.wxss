@@ -1,0 +1,289 @@
+
+.plans-page.data-v-80c07444 {
+  min-height: 100vh;
+  background: #f0f4f8;
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 40rpx;
+}
+.bg-decor.data-v-80c07444 {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 300rpx;
+  overflow: hidden;
+}
+.bg-ball.data-v-80c07444 {
+  position: absolute;
+  border-radius: 50%;
+}
+.b1.data-v-80c07444 {
+  width: 300rpx; height: 300rpx;
+  background: rgba(79, 172, 254, 0.08);
+  top: -160rpx; right: -80rpx;
+  animation: floatB-80c07444 7s ease-in-out infinite;
+}
+.b2.data-v-80c07444 {
+  width: 160rpx; height: 160rpx;
+  background: rgba(123, 109, 240, 0.06);
+  top: 40rpx; left: -40rpx;
+  animation: floatB-80c07444 5s ease-in-out infinite reverse;
+}
+@keyframes floatB-80c07444 {
+0%, 100% { transform: translateY(0);
+}
+50% { transform: translateY(16rpx);
+}
+}
+@keyframes fadeIn-80c07444 {
+from { opacity: 0; transform: translateY(20rpx);
+}
+to { opacity: 1; transform: translateY(0);
+}
+}
+@keyframes slideIn-80c07444 {
+from { opacity: 0; transform: scale(0.96);
+}
+to { opacity: 1; transform: scale(1);
+}
+}
+
+/* 导航栏 */
+.nav-bar.data-v-80c07444 {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 100rpx 32rpx 16rpx;
+}
+.nav-back.data-v-80c07444 {
+  width: 56rpx; height: 56rpx;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.8);
+}
+.nav-title.data-v-80c07444 {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #222;
+}
+.nav-add.data-v-80c07444 {
+  width: 56rpx; height: 56rpx;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.8);
+}
+
+/* 日历卡片 */
+.calendar-card.data-v-80c07444 {
+  position: relative;
+  z-index: 10;
+  margin: 16rpx 24rpx;
+  background: #fff;
+  border-radius: 28rpx;
+  padding: 28rpx 20rpx 24rpx;
+  box-shadow: 0 4rpx 24rpx rgba(79, 172, 254, 0.08);
+  opacity: 0;
+}
+.calendar-card.show.data-v-80c07444 {
+  animation: slideIn-80c07444 0.5s ease-out 0.1s both;
+}
+
+/* 月份切换 */
+.month-row.data-v-80c07444 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+  padding: 0 12rpx;
+}
+.month-arrow.data-v-80c07444 {
+  width: 48rpx; height: 48rpx;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+.month-arrow.data-v-80c07444:active {
+  background: #f0f4f8;
+}
+.month-title.data-v-80c07444 {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #333;
+}
+
+/* 星期头 */
+.week-header.data-v-80c07444 {
+  display: flex;
+  margin-bottom: 12rpx;
+}
+.week-cell.data-v-80c07444 {
+  flex: 1;
+  text-align: center;
+  font-size: 22rpx;
+  color: #bbb;
+  padding: 8rpx 0;
+}
+
+/* 日期格子 */
+.days-grid.data-v-80c07444 {
+  display: flex;
+  flex-wrap: wrap;
+}
+.day-cell.data-v-80c07444 {
+  width: calc(100% / 7);
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16rpx;
+  transition: all 0.2s;
+  position: relative;
+}
+.day-cell.data-v-80c07444:not(.empty):active {
+  transform: scale(0.9);
+}
+.day-num.data-v-80c07444 {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+.day-cell.today .day-num.data-v-80c07444 {
+  color: #4facfe;
+  font-weight: 700;
+}
+.day-cell.selected.data-v-80c07444 {
+  background: linear-gradient(135deg, #4facfe, #6cb4ee);
+  box-shadow: 0 4rpx 16rpx rgba(79, 172, 254, 0.3);
+}
+.day-cell.selected .day-num.data-v-80c07444 {
+  color: #fff;
+  font-weight: 700;
+}
+.day-dot.data-v-80c07444 {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: #4facfe;
+  margin-top: 4rpx;
+  position: absolute;
+  bottom: 10rpx;
+}
+.day-cell.selected .day-dot.data-v-80c07444 {
+  background: rgba(255,255,255,0.8);
+}
+
+/* 选中日期标题 */
+.selected-header.data-v-80c07444 {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 36rpx 12rpx;
+}
+.selected-label.data-v-80c07444 {
+  font-size: 26rpx;
+  color: #555;
+  font-weight: 600;
+}
+.selected-count.data-v-80c07444 {
+  font-size: 22rpx;
+  color: #bbb;
+}
+
+/* 计划卡片 */
+.plan-list.data-v-80c07444 {
+  position: relative;
+  z-index: 10;
+  padding: 0 24rpx;
+}
+.plan-card.data-v-80c07444 {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx 24rpx;
+  margin-bottom: 14rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+  animation: fadeIn-80c07444 0.3s ease-out both;
+  transition: transform 0.15s;
+}
+.plan-card.data-v-80c07444:active {
+  transform: scale(0.98);
+}
+.plan-left.data-v-80c07444 {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  flex: 1;
+}
+.plan-color-bar.data-v-80c07444 {
+  width: 6rpx;
+  height: 44rpx;
+  border-radius: 3rpx;
+  flex-shrink: 0;
+}
+.plan-info.data-v-80c07444 {
+  flex: 1;
+}
+.plan-name.data-v-80c07444 {
+  display: block;
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.plan-name.done.data-v-80c07444 {
+  color: #ccc;
+  text-decoration: line-through;
+}
+.plan-meta.data-v-80c07444 {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  margin-top: 8rpx;
+}
+.plan-time.data-v-80c07444 {
+  font-size: 22rpx;
+  color: #aaa;
+}
+.plan-check.data-v-80c07444 {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  border: 2rpx solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s;
+  flex-shrink: 0;
+}
+.plan-check.data-v-80c07444:active {
+  transform: scale(0.9);
+}
+.plan-check.done.data-v-80c07444 {
+  background: linear-gradient(135deg, #4facfe, #6cb4ee);
+  border-color: transparent;
+  box-shadow: 0 4rpx 12rpx rgba(79, 172, 254, 0.3);
+}
+
+/* 空状态 */
+.empty.data-v-80c07444 {
+  text-align: center;
+  padding: 80rpx 0 40rpx;
+}
+.empty-text.data-v-80c07444 {
+  display: block;
+  font-size: 28rpx;
+  color: #999;
+  margin-top: 20rpx;
+}
+.empty-sub.data-v-80c07444 {
+  display: block;
+  font-size: 22rpx;
+  color: #ccc;
+  margin-top: 8rpx;
+}
