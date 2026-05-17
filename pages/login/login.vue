@@ -224,6 +224,10 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { login } from '../../utils/api.js'
+
+// 模块级标记：同一会话内只播一次
+let splashPlayed = false
 
 const loaded = ref(false)
 const splashReady = ref(false)
@@ -235,6 +239,7 @@ const rippleShow = ref(false)
 const shapeShow = ref(false)
 const waveShow = ref(false)
 const showPw = ref(false)
+const logging = ref(false)
 
 const titleChars = ref([
   { ch: 'R', show: false },
@@ -257,26 +262,41 @@ function showTitleChars() {
 const loginForm = ref({ email: '', password: '' })
 
 const canLogin = computed(() => {
-  return loginForm.value.email && loginForm.value.password
+  return loginForm.value.email && loginForm.value.password && !logging.value
 })
 
-setTimeout(() => { rippleShow.value = true }, 200)
-setTimeout(() => { splashReady.value = true }, 500)
-setTimeout(() => { shapeShow.value = true }, 800)
-setTimeout(() => { showTitleChars() }, 1200)
-setTimeout(() => { subShow.value = true }, 2400)
-setTimeout(() => { waveShow.value = true }, 2600)
-setTimeout(() => { progressGo.value = true }, 2800)
-setTimeout(() => { splashHide.value = true }, 4800)
-setTimeout(() => { loaded.value = true }, 5100)
+if (splashPlayed) {
+  // 已播放过，直接显示内容
+  splashHide.value = true
+  loaded.value = true
+} else {
+  splashPlayed = true
+  setTimeout(() => { rippleShow.value = true }, 200)
+  setTimeout(() => { splashReady.value = true }, 500)
+  setTimeout(() => { shapeShow.value = true }, 800)
+  setTimeout(() => { showTitleChars() }, 1200)
+  setTimeout(() => { subShow.value = true }, 2400)
+  setTimeout(() => { waveShow.value = true }, 2600)
+  setTimeout(() => { progressGo.value = true }, 2800)
+  setTimeout(() => { splashHide.value = true }, 4800)
+  setTimeout(() => { loaded.value = true }, 5100)
+}
 
-function onLogin() {
+async function onLogin() {
   if (!canLogin.value) {
     uni.showToast({ title: '请填写完整信息', icon: 'none' })
     return
   }
-  uni.showToast({ title: '登录成功', icon: 'success' })
-  setTimeout(() => uni.navigateBack(), 1000)
+  logging.value = true
+  try {
+    const res = await login(loginForm.value.email, loginForm.value.password)
+    uni.showToast({ title: '登录成功', icon: 'success' })
+    setTimeout(() => uni.navigateBack(), 1000)
+  } catch (e) {
+    uni.showToast({ title: e.message || '登录失败', icon: 'none' })
+  } finally {
+    logging.value = false
+  }
 }
 
 function goRegister() {
@@ -284,7 +304,7 @@ function goRegister() {
 }
 
 function onForgotPw() {
-  uni.showToast({ title: '找回密码功能开发中', icon: 'none' })
+  uni.navigateTo({ url: '/pages/forgot/forgot' })
 }
 </script>
 

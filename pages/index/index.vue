@@ -72,6 +72,21 @@
           <text class="banner-title">AI成长</text>
           <text class="banner-sub">你的智能计划助手</text>
         </view>
+        <view class="plan-entry" @tap="goNotifications">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#fff" stroke-width="1.5"/>
+            <path d="M13.73 21a2 2 0 01-3.46 0" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <view class="badge" v-if="store.unreadCount > 0">
+            <text class="badge-text">{{ store.unreadCount > 99 ? '99+' : store.unreadCount }}</text>
+          </view>
+        </view>
+        <view class="plan-entry" @tap="goTasks">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="3" width="18" height="18" rx="3" stroke="#fff" stroke-width="1.5"/>
+            <path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </view>
         <view class="plan-entry" @tap="goLogin">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="8" r="4" stroke="#fff" stroke-width="1.5"/>
@@ -288,7 +303,9 @@
 </template>
 
 <script setup>
-import { ref, nextTick, computed } from 'vue'
+import { ref, nextTick, computed, onMounted, onUnmounted } from 'vue'
+import { getAccessToken, sendChatMessage, getUnreadCount } from '../../utils/api.js'
+import { store } from '../../utils/store.js'
 
 const loaded = ref(false)
 const scrollTop = ref(0)
@@ -298,6 +315,8 @@ const inputFocus = ref(false)
 const isRecording = ref(false)
 const addVisible = ref(false)
 const recordTimer = ref(null)
+const sessionId = ref(null)
+const sending = ref(false)
 let recognition = null
 
 const addOptions = [
@@ -317,14 +336,35 @@ const showTags = computed(() => messages.value.length <= 2)
 
 setTimeout(() => { loaded.value = true }, 80)
 
+onMounted(() => {
+  if (getAccessToken()) {
+    getUnreadCount().then(res => {
+      store.unreadCount = res.count || 0
+    }).catch(() => {})
+  }
+})
+
 function scroll() { nextTick(() => { scrollTop.value = Math.random() * 99999 }) }
 
 function goPlans() {
   uni.navigateTo({ url: '/pages/plans/plans' })
 }
 
+function goNotifications() {
+  uni.navigateTo({ url: '/pages/notifications/notifications' })
+}
+
+function goTasks() {
+  uni.navigateTo({ url: '/pages/tasks/tasks' })
+}
+
 function goLogin() {
-  uni.navigateTo({ url: '/pages/login/login' })
+  const token = getAccessToken()
+  if (token) {
+    uni.navigateTo({ url: '/pages/profile/profile' })
+  } else {
+    uni.navigateTo({ url: '/pages/login/login' })
+  }
 }
 
 function toggleMode() {
@@ -336,11 +376,21 @@ function toggleMode() {
 
 function onSend() {
   const t = inputText.value.trim()
-  if (!t) return
+  if (!t || sending.value) return
+  sending.value = true
   messages.value.push({ role: 'user', content: t })
   inputText.value = ''
   scroll()
-  setTimeout(() => { messages.value.push(reply(t)); scroll() }, 700)
+  sendChatMessage(t, sessionId.value || undefined).then(res => {
+    sessionId.value = res.sessionId
+    messages.value.push({ role: 'ai', type: 'text', title: '', content: res.reply, tip: '' })
+    scroll()
+  }).catch(() => {
+    messages.value.push({ role: 'ai', type: 'text', title: '', content: '网络异常，请稍后重试', tip: '' })
+    scroll()
+  }).finally(() => {
+    sending.value = false
+  })
 }
 
 function toggleVoice() {
@@ -369,7 +419,15 @@ function startRecord() {
     isRecording.value = false
     messages.value.push({ role: 'user', content: '[语音] ' + text })
     scroll()
-    setTimeout(() => { messages.value.push(reply(text)); scroll() }, 700)
+    sending.value = true
+    sendChatMessage(text, sessionId.value || undefined).then(res => {
+      sessionId.value = res.sessionId
+      messages.value.push({ role: 'ai', type: 'text', title: '', content: res.reply, tip: '' })
+      scroll()
+    }).catch(() => {
+      messages.value.push({ role: 'ai', type: 'text', title: '', content: '网络异常，请稍后重试', tip: '' })
+      scroll()
+    }).finally(() => { sending.value = false })
   }
 
   recognition.onerror = () => {
@@ -394,9 +452,18 @@ function stopRecord() {
 }
 
 function onQuick(t) {
+  if (sending.value) return
+  sending.value = true
   messages.value.push({ role: 'user', content: t })
   scroll()
-  setTimeout(() => { messages.value.push(reply(t)); scroll() }, 700)
+  sendChatMessage(t, sessionId.value || undefined).then(res => {
+    sessionId.value = res.sessionId
+    messages.value.push({ role: 'ai', type: 'text', title: '', content: res.reply, tip: '' })
+    scroll()
+  }).catch(() => {
+    messages.value.push({ role: 'ai', type: 'text', title: '', content: '网络异常，请稍后重试', tip: '' })
+    scroll()
+  }).finally(() => { sending.value = false })
 }
 
 function onFeature(type) {
@@ -413,25 +480,7 @@ function onAdd(key) {
   uni.showToast({ title: '已选择照片', icon: 'none' })
 }
 
-function reply(input) {
-  const t = input.toLowerCase()
-  if (t.includes('安排') || t.includes('计划') || t.includes('开会') || t.includes('健身'))
-    return { role: 'ai', type: 'plan', content: '好的，已为你创建以下计划并安排到明天（5月20日）',
-      plans: [{ icon: '', name: '会议', time: '10:00 - 11:00' }, { icon: '', name: '健身', time: '14:00 - 15:30' }, { icon: '', name: '学习', time: '20:00 - 22:00' }] }
-  if (t.includes('推荐') || t.includes('习惯'))
-    return { role: 'ai', type: 'recommend', content: '为你推荐以下高效习惯：',
-      items: ['每天早起30分钟，做晨间冥想', '睡前1小时不看手机', '每天写3件感恩的事'] }
-  if (t.includes('复盘') || t.includes('喝水'))
-    return { role: 'ai', type: 'text', title: '已为你设置提醒 ✅',
-      content: t.includes('复盘') ? '每天晚上21:00会提醒你进行今日复盘。' : '已设置每小时喝水提醒，保持充足水分哦！', tip: '' }
-  if (t.includes('日程') || t.includes('查看'))
-    return { role: 'ai', type: 'plan', content: '这是你今天的日程安排：',
-      plans: [{ icon: '', name: '晨会', time: '09:00 - 09:30' }, { icon: '', name: '开发任务', time: '10:00 - 12:00' }, { icon: '', name: '午餐', time: '12:00 - 13:00' }, { icon: '', name: '项目复盘', time: '15:00 - 16:00' }] }
-  if (t.includes('数据') || t.includes('统计'))
-    return { role: 'ai', type: 'stats', content: '这是你最近7天的数据概览：',
-      stats: [{ label: '完成计划', value: '18', color: '#7b6df0' }, { label: '学习时长', value: '12.5h', color: '#67c23a' }, { label: '运动次数', value: '4', color: '#e6a23c' }, { label: '早起天数', value: '5', color: '#f56c6c' }] }
-  return { role: 'ai', type: 'text', title: '', content: '收到！我会帮你记住这个计划。你可以继续告诉我更多安排。', tip: '' }
-}
+
 </script>
 
 <style scoped>
@@ -481,10 +530,25 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
   padding: 8rpx 16rpx;
   border-radius: 20rpx;
   margin-left: auto;
+  position: relative;
 }
 .plan-entry-txt {
   font-size: 22rpx;
   color: #fff;
+}
+.badge {
+  position: absolute;
+  top: -8rpx; right: -8rpx;
+  min-width: 28rpx; height: 28rpx;
+  border-radius: 14rpx;
+  background: #ff4757;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 6rpx;
+}
+.badge-text {
+  font-size: 18rpx;
+  color: #fff;
+  font-weight: 600;
 }
 .banner-texts { flex: 1; }
 .banner-title { display: block; color: #fff; font-size: 32rpx; font-weight: bold; }

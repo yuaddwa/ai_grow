@@ -27,6 +27,36 @@
 				"navigationStyle": "custom",
 				"navigationBarTitleText": "注册"
 			}
+		},
+		{
+			"path": "pages/forgot/forgot",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "忘记密码"
+			}
+		},
+		{
+			"path": "pages/profile/profile",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "个人中心"
+			}
+		},
+		{
+			"path": "pages/tasks/tasks",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "我的任务",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/notifications/notifications",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "通知中心",
+				"enablePullDownRefresh": true
+			}
 		}
 	],
 	"globalStyle": {

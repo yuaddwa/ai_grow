@@ -132,39 +132,61 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { sendRegisterCode, register } from '../../utils/api.js'
 
 const loaded = ref(false)
 const showPw = ref(false)
 const countdown = ref(0)
+const submitting = ref(false)
 
 const form = ref({ email: '', code: '', password: '', nickname: '' })
 
 const canRegister = computed(() => {
-  return form.value.email && form.value.code && form.value.password
+  return form.value.email && form.value.code && form.value.password && form.value.nickname && !submitting.value
 })
 
 setTimeout(() => { loaded.value = true }, 80)
 
-function sendCode() {
+async function sendCode() {
   if (!form.value.email) {
     uni.showToast({ title: '请输入邮箱', icon: 'none' })
     return
   }
-  uni.showToast({ title: '验证码已发送', icon: 'none' })
-  countdown.value = 60
-  const timer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) clearInterval(timer)
-  }, 1000)
+  try {
+    await sendRegisterCode(form.value.email)
+    uni.showToast({ title: '验证码已发送', icon: 'none' })
+    countdown.value = 60
+    const timer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) clearInterval(timer)
+    }, 1000)
+  } catch (e) {
+    uni.showToast({ title: e.message || '发送失败', icon: 'none' })
+  }
 }
 
-function onRegister() {
-  if (!canRegister.value) {
+async function onRegister() {
+  if (!form.value.email || !form.value.code || !form.value.password || !form.value.nickname) {
     uni.showToast({ title: '请填写必要信息', icon: 'none' })
     return
   }
-  uni.showToast({ title: '注册成功', icon: 'success' })
-  setTimeout(() => uni.navigateBack(), 1000)
+  submitting.value = true
+  try {
+    await register({
+      email: form.value.email,
+      password: form.value.password,
+      nickname: form.value.nickname,
+      verificationCode: form.value.code
+    })
+    uni.showToast({ title: '注册成功', icon: 'success' })
+    setTimeout(() => {
+      uni.reLaunch({ url: '/pages/index/index' })
+    }, 1000)
+  } catch (e) {
+    uni.showToast({ title: e.message || '注册失败', icon: 'none' })
+  } finally {
+    submitting.value = false
+  }
 }
 
 function goLogin() {
