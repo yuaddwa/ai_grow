@@ -276,12 +276,13 @@ export function transcribeAudio(filePath) {
         },
         fail: (err) => {
           const msg = (err && err.errMsg) || ''
+          console.error('transcribeAudio upload fail:', msg)
           if (msg.includes('exceed max upload') && tried < 3) {
             tried++
             console.warn('uploadFile retry', tried, 'in', tried * 500, 'ms')
             setTimeout(doUpload, tried * 500)
           } else {
-            reject({ code: 'NETWORK_ERROR', message: '上传失败' })
+            reject({ code: 'NETWORK_ERROR', message: msg.includes('fail') ? '上传失败，请检查网络' : '上传失败' })
           }
         }
       })

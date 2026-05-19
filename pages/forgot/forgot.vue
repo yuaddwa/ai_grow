@@ -310,7 +310,8 @@ function goBack() {
 
 <style scoped>
 .forgot-page {
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   background: linear-gradient(135deg, #e0f4ff 0%, #d4ecff 25%, #e8f0ff 50%, #f0f7ff 100%);
   position: relative;
   overflow: hidden;

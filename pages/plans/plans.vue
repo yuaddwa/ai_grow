@@ -62,35 +62,37 @@
     </view>
 
     <!-- 当日计划列表 -->
-    <view class="plan-list">
-      <view
-        v-for="(p, pi) in selectedPlans"
-        :key="p.id"
-        class="plan-card"
-        :class="{ show: loaded }" :style="{ transitionDelay: (pi * 0.08) + 's' }"
-      >
-        <view class="plan-left">
-          <view class="plan-color-bar" :style="{ background: p.color }"></view>
-          <view class="plan-info">
-            <text class="plan-name" :class="{ done: p.done }">{{ p.name }}</text>
-            <view class="plan-meta">
-              <text style="font-size:22rpx;">⏰</text>
-              <text class="plan-time">{{ p.time }}</text>
+    <scroll-view class="plan-scroll" scroll-y :bounces="false" :show-scrollbar="false">
+      <view class="plan-list">
+        <view
+          v-for="(p, pi) in selectedPlans"
+          :key="p.id"
+          class="plan-card"
+          :class="{ show: loaded }" :style="{ transitionDelay: (pi * 0.08) + 's' }"
+        >
+          <view class="plan-left">
+            <view class="plan-color-bar" :style="{ background: p.color }"></view>
+            <view class="plan-info">
+              <text class="plan-name" :class="{ done: p.done }">{{ p.name }}</text>
+              <view class="plan-meta">
+                <text style="font-size:22rpx;">⏰</text>
+                <text class="plan-time">{{ p.time }}</text>
+              </view>
             </view>
           </view>
+          <view class="plan-check" :class="{ done: p.done }" @tap="toggleDone(p)">
+            <text v-if="p.done" style="font-size:28rpx;color:#fff;">✔</text>
+          </view>
         </view>
-        <view class="plan-check" :class="{ done: p.done }" @tap="toggleDone(p)">
-          <text v-if="p.done" style="font-size:28rpx;color:#fff;">✔</text>
-        </view>
-      </view>
 
-      <!-- 空状态 -->
-      <view class="empty" v-if="selectedPlans.length === 0">
-        <text style="font-size:60rpx;opacity:0.3;">📅</text>
-        <text class="empty-text">这一天还没有计划</text>
-        <text class="empty-sub">点击右上角 + 添加</text>
+        <!-- 空状态 -->
+        <view class="empty" v-if="selectedPlans.length === 0">
+          <text style="font-size:60rpx;opacity:0.3;">📅</text>
+          <text class="empty-text">这一天还没有计划</text>
+          <text class="empty-sub">点击右上角 + 添加</text>
+        </view>
       </view>
-    </view>
+    </scroll-view>
   </view>
 </template>
 
@@ -210,11 +212,12 @@ function addPlan() {
 
 <style scoped>
 .plans-page {
-  min-height: 100vh;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   background: #f0f4f8;
   position: relative;
   overflow: hidden;
-  padding-bottom: 40rpx;
 }
 
 .bg-decor {
@@ -253,6 +256,7 @@ function addPlan() {
 .nav-bar {
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -283,6 +287,7 @@ function addPlan() {
 .calendar-card {
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
   margin: 16rpx 24rpx;
   background: #fff;
   border-radius: 28rpx;
@@ -398,6 +403,7 @@ function addPlan() {
 .selected-header {
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -415,11 +421,18 @@ function addPlan() {
   color: #bbb;
 }
 
-/* 计划卡片 */
-.plan-list {
+/* 计划列表滚动区 */
+.plan-scroll {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  width: 100%;
   position: relative;
   z-index: 10;
-  padding: 0 24rpx;
+}
+
+.plan-list {
+  padding: 0 24rpx 40rpx;
 }
 
 .plan-card {
@@ -432,18 +445,15 @@ function addPlan() {
   align-items: center;
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
   opacity: 0;
-  transform: translateY(12rpx);
-  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+  transition: opacity 0.3s ease-out;
 }
 
 .plan-card.show {
   opacity: 1;
-  transform: translateY(0);
 }
 
 .plan-card:active {
-  transform: scale(0.98);
-  transition: opacity 0.3s ease-out, transform 0.15s;
+  opacity: 0.85;
 }
 
 .plan-left {

@@ -34,7 +34,15 @@
     </view>
 
     <!-- 任务列表 -->
-    <scroll-view class="task-scroll" scroll-y :refresher-enabled="true" :refresher-triggered="refreshing" @refresherrefresh="onRefresh">
+    <scroll-view
+      class="task-scroll"
+      scroll-y
+      :bounces="false"
+      :show-scrollbar="false"
+      :refresher-enabled="true"
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+    >
       <view v-if="tasks.length === 0 && !loading" class="empty-state">
         <text style="font-size:80rpx;opacity:0.3;">📋</text>
         <text class="empty-text">暂无任务</text>
@@ -138,7 +146,9 @@ function statusText(status) {
 
 <style scoped>
 .tasks-page {
-  min-height: 100vh;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%);
   position: relative;
   overflow: hidden;
@@ -199,8 +209,14 @@ function statusText(status) {
 
 /* 任务列表 */
 .task-scroll {
-  position: relative; z-index: 1;
-  flex: 1; height: calc(100vh - 340rpx); padding: 10rpx 32rpx;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  width: 100%;
+  padding: 10rpx 32rpx;
+  box-sizing: border-box;
 }
 
 /* 空状态 */
@@ -218,11 +234,11 @@ function statusText(status) {
   border-radius: 24rpx; margin-bottom: 16rpx;
   box-shadow: 0 4rpx 20rpx rgba(79,172,254,0.06);
   border: 1rpx solid rgba(255,255,255,0.6);
-  opacity: 0; transform: translateY(20rpx);
-  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
 }
-.task-card.show { opacity: 1; transform: translateY(0); }
-.task-card:active { transform: scale(0.98); }
+.task-card.show { opacity: 1; }
+.task-card:active { opacity: 0.85; }
 
 .task-left { flex-shrink: 0; padding-top: 8rpx; }
 .task-status-dot {

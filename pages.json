@@ -4,14 +4,16 @@
 			"path": "pages/index/index",
 			"style": {
 				"navigationStyle": "custom",
-				"navigationBarTitleText": "AI成长"
+				"navigationBarTitleText": "AI成长",
+				"disableScroll": true
 			}
 		},
 		{
 			"path": "pages/plans/plans",
 			"style": {
 				"navigationStyle": "custom",
-				"navigationBarTitleText": "我的计划"
+				"navigationBarTitleText": "我的计划",
+				"disableScroll": true
 			}
 		},
 		{
@@ -39,7 +41,8 @@
 			"path": "pages/profile/profile",
 			"style": {
 				"navigationStyle": "custom",
-				"navigationBarTitleText": "个人中心"
+				"navigationBarTitleText": "个人中心",
+				"disableScroll": true
 			}
 		},
 		{
@@ -47,7 +50,7 @@
 			"style": {
 				"navigationStyle": "custom",
 				"navigationBarTitleText": "我的任务",
-				"enablePullDownRefresh": true
+				"disableScroll": true
 			}
 		},
 		{
@@ -55,7 +58,7 @@
 			"style": {
 				"navigationStyle": "custom",
 				"navigationBarTitleText": "通知中心",
-				"enablePullDownRefresh": true
+				"disableScroll": true
 			}
 		}
 	],
@@ -63,7 +66,10 @@
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "uni-app",
 		"navigationBarBackgroundColor": "#F8F8F8",
-		"backgroundColor": "#F8F8F8"
+		"backgroundColor": "#F8F8F8",
+		"app-plus": {
+			"bounce": "none"
+		}
 	},
 	"uniIdRouter": {}
 }
