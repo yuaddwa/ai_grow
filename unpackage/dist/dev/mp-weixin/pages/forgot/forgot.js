@@ -17,9 +17,13 @@ const _sfc_main = {
       password: "",
       confirmPassword: ""
     });
-    setTimeout(() => {
-      loaded.value = true;
-    }, 80);
+    common_vendor.onMounted(() => {
+      common_vendor.nextTick$1(() => {
+        setTimeout(() => {
+          loaded.value = true;
+        }, 50);
+      });
+    });
     const canVerify = common_vendor.computed(() => {
       return form.value.email && form.value.code && !submitting.value;
     });

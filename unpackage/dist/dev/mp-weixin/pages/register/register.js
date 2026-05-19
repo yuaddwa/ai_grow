@@ -12,9 +12,13 @@ const _sfc_main = {
     const canRegister = common_vendor.computed(() => {
       return form.value.email && form.value.code && form.value.password && form.value.nickname && !submitting.value;
     });
-    setTimeout(() => {
-      loaded.value = true;
-    }, 80);
+    common_vendor.onMounted(() => {
+      common_vendor.nextTick$1(() => {
+        setTimeout(() => {
+          loaded.value = true;
+        }, 50);
+      });
+    });
     async function sendCode() {
       if (!form.value.email) {
         common_vendor.index.showToast({ title: "请输入邮箱", icon: "none" });

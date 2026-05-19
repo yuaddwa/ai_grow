@@ -123,7 +123,7 @@
         />
       </view>
       <!-- 语音模式 -->
-      <view v-else class="voice-area" hover-class="voice-area-hover" :hover-start-time="10" @click="toggleVoice">
+      <view v-else class="voice-area" hover-class="voice-area-hover" :hover-start-time="10">
         <text class="voice-tip" :class="{ recording: isRecording }">
           {{ isRecording ? '正在录音...点击停止' : '点击说话' }}
         </text>
@@ -194,6 +194,7 @@ const userAvatar = ref('')
 const composing = ref(false)
 let recorderManager = null
 let h5MediaRecorder = null
+let isProcessingVoice = false
 
 const addOptions = [
   { key: 'photo', label: '照片', bg: '#ece5ff', color: '#7b6df0' }
@@ -283,10 +284,14 @@ function onSend() {
   })
 }
 
+let recordStartTime = 0
+
 function toggleVoice() {
   if (isRecording.value) {
+    if (Date.now() - recordStartTime < 800) return // 录音不足 0.8s 忽略
     stopRecord()
   } else {
+    recordStartTime = Date.now()
     startRecord()
   }
 }
@@ -300,16 +305,24 @@ function startRecord() {
 
   isRecording.value = true
 
+  const platform = uni.getSystemInfoSync().platform
+
   // App / 小程序：uni.getRecorderManager
-  if (uni.getRecorderManager) {
+  if (platform !== 'web') {
     try {
       if (!recorderManager) {
         recorderManager = uni.getRecorderManager()
         recorderManager.onStop((res) => {
+          console.log('recorderManager onStop:', JSON.stringify(res))
           isRecording.value = false
-          if (res.tempFilePath) handleVoiceResult(res.tempFilePath)
+          if (isProcessingVoice) return
+          if (res.tempFilePath) {
+            isProcessingVoice = true
+            handleVoiceResult(res.tempFilePath)
+          }
         })
         recorderManager.onError((err) => {
+          console.error('recorderManager onError:', JSON.stringify(err))
           isRecording.value = false
           uni.showToast({ title: '录音失败', icon: 'none' })
         })
@@ -318,11 +331,12 @@ function startRecord() {
         duration: 60, sampleRate: 16000,
         numberOfChannels: 1, encodeBitRate: 48000, format: 'mp3'
       })
+      return
     } catch (e) {
       isRecording.value = false
       uni.showToast({ title: '录音初始化失败', icon: 'none' })
+      return
     }
-    return
   }
 
   // H5 浏览器：MediaRecorder API
@@ -361,7 +375,7 @@ function stopRecord() {
   }
 }
 
-// H5 专用：直接 fetch 上传音频 blob
+// H5 专用：XMLHttpRequest 上传音频 blob
 function uploadAndTranscribeBlob(blob) {
   messages.value.push({ role: 'user', content: '[语音] 识别中...', show: true })
   scroll()
@@ -370,27 +384,37 @@ function uploadAndTranscribeBlob(blob) {
   form.append('file', blob, 'speech.webm')
 
   const token = getAccessToken()
-  fetch(BASE_URL + '/api/v1/speech/transcribe', {
-    method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + token },
-    body: form
-  }).then(res => {
-    if (res.ok) return res.json()
-    if (res.status === 401) throw { code: 'UNAUTHORIZED' }
-    return res.json().catch(() => { throw { message: '语音识别失败' } }).then(d => { throw d })
-  }).then(res => {
-    onTranscribeSuccess(res.text)
-  }).catch((e) => {
-    if (e && e.code === 'UNAUTHORIZED') {
+  const xhr = new XMLHttpRequest()
+  xhr.open('POST', BASE_URL + '/api/v1/speech/transcribe')
+  xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+  xhr.onload = function () {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      try {
+        const res = JSON.parse(xhr.responseText)
+        onTranscribeSuccess(res.text)
+      } catch (e) {
+        uni.showToast({ title: '语音识别失败', icon: 'none' })
+      }
+    } else if (xhr.status === 401) {
       uni.showToast({ title: '请先登录', icon: 'none' })
       setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }) }, 800)
     } else {
-      uni.showToast({ title: e.message || '语音识别失败', icon: 'none' })
+      try {
+        const err = JSON.parse(xhr.responseText)
+        uni.showToast({ title: err.message || '语音识别失败', icon: 'none' })
+      } catch (e) {
+        uni.showToast({ title: '语音识别失败', icon: 'none' })
+      }
     }
-  })
+  }
+  xhr.onerror = function () {
+    uni.showToast({ title: '网络连接失败', icon: 'none' })
+  }
+  xhr.send(form)
 }
 
 function handleVoiceResult(filePath) {
+  console.log('handleVoiceResult filePath:', filePath)
   messages.value.push({ role: 'user', content: '[语音] 识别中...', show: true })
   scroll()
 
@@ -403,6 +427,8 @@ function handleVoiceResult(filePath) {
     } else {
       uni.showToast({ title: e.message || '语音识别失败', icon: 'none' })
     }
+  }).finally(() => {
+    isProcessingVoice = false
   })
 }
 

@@ -9,9 +9,13 @@ const _sfc_main = {
     const curYear = common_vendor.ref(today.getFullYear());
     const curMonth = common_vendor.ref(today.getMonth() + 1);
     const selectedDate = common_vendor.ref(formatDate(today));
-    setTimeout(() => {
-      loaded.value = true;
-    }, 80);
+    common_vendor.onMounted(() => {
+      common_vendor.nextTick$1(() => {
+        setTimeout(() => {
+          loaded.value = true;
+        }, 50);
+      });
+    });
     function formatDate(d) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }
@@ -140,7 +144,8 @@ const _sfc_main = {
             i: pi * 0.08 + "s"
           });
         }),
-        n: selectedPlans.value.length === 0
+        n: loaded.value ? 1 : "",
+        o: selectedPlans.value.length === 0
       }, selectedPlans.value.length === 0 ? {} : {});
     };
   }

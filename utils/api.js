@@ -64,6 +64,7 @@ function request(options) {
             })
           }).catch(() => {
             clearTokens()
+            uni.reLaunch({ url: '/pages/login/login' })
             reject({ code: 'UNAUTHORIZED', message: '登录已过期' })
           })
           return
@@ -255,24 +256,37 @@ export function changePassword(oldPassword, newPassword) {
 export function transcribeAudio(filePath) {
   return new Promise((resolve, reject) => {
     const token = getAccessToken()
-    uni.uploadFile({
-      url: BASE_URL + '/api/v1/speech/transcribe',
-      filePath,
-      name: 'file',
-      header: { 'Authorization': 'Bearer ' + token },
-      success: (res) => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          try { resolve(JSON.parse(res.data)) }
-          catch (e) { reject({ code: 'ERROR', message: '响应解析失败' }) }
-        } else if (res.statusCode === 401) {
-          reject({ code: 'UNAUTHORIZED', message: '登录已过期' })
-        } else {
-          try { reject(JSON.parse(res.data)) }
-          catch (e) { reject({ code: 'ERROR', message: '语音识别失败(' + res.statusCode + ')' }) }
+    let tried = 0
+    const doUpload = () => {
+      uni.uploadFile({
+        url: BASE_URL + '/api/v1/speech/transcribe',
+        filePath,
+        name: 'file',
+        header: { 'Authorization': 'Bearer ' + token },
+        success: (res) => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            try { resolve(JSON.parse(res.data)) }
+            catch (e) { reject({ code: 'ERROR', message: '响应解析失败' }) }
+          } else if (res.statusCode === 401) {
+            reject({ code: 'UNAUTHORIZED', message: '登录已过期' })
+          } else {
+            try { reject(JSON.parse(res.data)) }
+            catch (e) { reject({ code: 'ERROR', message: '语音识别失败(' + res.statusCode + ')' }) }
+          }
+        },
+        fail: (err) => {
+          const msg = (err && err.errMsg) || ''
+          if (msg.includes('exceed max upload') && tried < 3) {
+            tried++
+            console.warn('uploadFile retry', tried, 'in', tried * 500, 'ms')
+            setTimeout(doUpload, tried * 500)
+          } else {
+            reject({ code: 'NETWORK_ERROR', message: '上传失败' })
+          }
         }
-      },
-      fail: () => reject({ code: 'NETWORK_ERROR', message: '上传失败' })
-    })
+      })
+    }
+    doUpload()
   })
 }
 

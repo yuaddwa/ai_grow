@@ -34,18 +34,7 @@
 50% { transform: translateY(16rpx);
 }
 }
-@keyframes fadeIn-80c07444 {
-from { opacity: 0; transform: translateY(20rpx);
-}
-to { opacity: 1; transform: translateY(0);
-}
-}
-@keyframes slideIn-80c07444 {
-from { opacity: 0; transform: scale(0.96);
-}
-to { opacity: 1; transform: scale(1);
-}
-}
+
 
 /* 导航栏 */
 .nav-bar.data-v-80c07444 {
@@ -86,7 +75,9 @@ to { opacity: 1; transform: scale(1);
   opacity: 0;
 }
 .calendar-card.show.data-v-80c07444 {
-  animation: slideIn-80c07444 0.5s ease-out 0.1s both;
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.5s ease-out 0.1s, transform 0.5s ease-out 0.1s;
 }
 
 /* 月份切换 */
@@ -208,11 +199,17 @@ to { opacity: 1; transform: scale(1);
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
-  animation: fadeIn-80c07444 0.3s ease-out both;
-  transition: transform 0.15s;
+  opacity: 0;
+  transform: translateY(12rpx);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+.plan-card.show.data-v-80c07444 {
+  opacity: 1;
+  transform: translateY(0);
 }
 .plan-card.data-v-80c07444:active {
   transform: scale(0.98);
+  transition: opacity 0.3s ease-out, transform 0.15s;
 }
 .plan-left.data-v-80c07444 {
   display: flex;

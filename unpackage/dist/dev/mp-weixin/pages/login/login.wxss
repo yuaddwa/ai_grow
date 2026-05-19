@@ -414,20 +414,17 @@ to { transform: rotate(360deg);
 }
 
 /* 内容入场动画 */
-@keyframes slideUp-e4e4508d {
-from { opacity: 0; transform: translateY(60rpx);
-}
-to { opacity: 1; transform: translateY(0);
-}
-}
 .content.data-v-e4e4508d {
   position: relative;
   z-index: 1;
   padding: 160rpx 48rpx 60rpx;
   opacity: 0;
+  transform: translateY(60rpx);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 .content.show.data-v-e4e4508d {
-  animation: slideUp-e4e4508d 0.6s ease-out both;
+  opacity: 1;
+  transform: translateY(0);
 }
 .title-area.data-v-e4e4508d {
   margin-bottom: 60rpx;

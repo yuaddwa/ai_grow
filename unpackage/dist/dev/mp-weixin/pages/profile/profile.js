@@ -58,9 +58,11 @@ const _sfc_main = {
     }
     common_vendor.onMounted(() => {
       loadUserInfo();
-      setTimeout(() => {
-        loaded.value = true;
-      }, 80);
+      common_vendor.nextTick$1(() => {
+        setTimeout(() => {
+          loaded.value = true;
+        }, 50);
+      });
     });
     function goBack() {
       const pages = getCurrentPages();
@@ -193,7 +195,8 @@ const _sfc_main = {
           });
         }),
         j: loaded.value ? 1 : "",
-        k: common_vendor.f(menus, (m, i, i0) => {
+        k: loaded.value ? 1 : "",
+        l: common_vendor.f(menus, (m, i, i0) => {
           return {
             a: m.bg,
             b: common_vendor.t(m.label),
@@ -202,21 +205,22 @@ const _sfc_main = {
             e: common_vendor.o(($event) => onMenu(m.key), i)
           };
         }),
-        l: loaded.value ? 1 : "",
-        m: common_vendor.o(onLogout),
+        m: loaded.value ? 1 : "",
         n: loaded.value ? 1 : "",
-        o: editVisible.value
+        o: common_vendor.o(onLogout),
+        p: loaded.value ? 1 : "",
+        q: editVisible.value
       }, editVisible.value ? {
-        p: editNickname.value,
-        q: common_vendor.o(($event) => editNickname.value = $event.detail.value),
-        r: common_vendor.o(($event) => editVisible.value = false),
-        s: common_vendor.t(saving.value ? "保存中..." : "保存"),
-        t: saving.value ? 1 : "",
-        v: saving.value,
-        w: common_vendor.o(saveProfile),
-        x: common_vendor.o(() => {
+        r: editNickname.value,
+        s: common_vendor.o(($event) => editNickname.value = $event.detail.value),
+        t: common_vendor.o(($event) => editVisible.value = false),
+        v: common_vendor.t(saving.value ? "保存中..." : "保存"),
+        w: saving.value ? 1 : "",
+        x: saving.value,
+        y: common_vendor.o(saveProfile),
+        z: common_vendor.o(() => {
         }),
-        y: common_vendor.o(($event) => editVisible.value = false)
+        A: common_vendor.o(($event) => editVisible.value = false)
       } : {});
     };
   }

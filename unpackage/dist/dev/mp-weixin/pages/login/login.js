@@ -80,7 +80,7 @@ const _sfc_main = {
       try {
         const res = await utils_api.login(loginForm.value.email, loginForm.value.password);
         common_vendor.index.showToast({ title: "登录成功", icon: "success" });
-        setTimeout(() => common_vendor.index.navigateBack(), 1e3);
+        setTimeout(() => common_vendor.index.reLaunch({ url: "/pages/index/index" }), 1e3);
       } catch (e) {
         common_vendor.index.showToast({ title: e.message || "登录失败", icon: "none" });
       } finally {

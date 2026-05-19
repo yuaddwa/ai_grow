@@ -236,13 +236,13 @@
   transform: translateY(0);
 }
 .step-content.data-v-51689b0a {
-  animation: fadeInUp-51689b0a 0.4s ease-out;
+  opacity: 0;
+  transform: translateY(30rpx);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
 }
-@keyframes fadeInUp-51689b0a {
-from { opacity: 0; transform: translateY(30rpx);
-}
-to { opacity: 1; transform: translateY(0);
-}
+.step-content.active.data-v-51689b0a {
+  opacity: 1;
+  transform: translateY(0);
 }
 .step-title.data-v-51689b0a {
   margin-bottom: 40rpx;
@@ -388,15 +388,6 @@ to { opacity: 1; transform: translateY(0);
 .success-icon.show.data-v-51689b0a {
   opacity: 1;
   transform: scale(1);
-}
-.check-line.data-v-51689b0a {
-  stroke-dasharray: 60;
-  stroke-dashoffset: 60;
-  animation: drawCheck-51689b0a 0.6s ease-out 0.3s forwards;
-}
-@keyframes drawCheck-51689b0a {
-to { stroke-dashoffset: 0;
-}
 }
 .success-title.data-v-51689b0a {
   display: block;

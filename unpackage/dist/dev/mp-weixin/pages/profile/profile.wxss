@@ -276,13 +276,13 @@ to { transform: translate(-50%, -50%) rotate(360deg);
   flex-direction: column;
   align-items: center;
   gap: 8rpx;
-  animation: fadeInUp-dd383ca2 0.5s ease-out both;
+  opacity: 0;
+  transform: translateY(20rpx);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
 }
-@keyframes fadeInUp-dd383ca2 {
-from { opacity: 0; transform: translateY(20rpx);
-}
-to { opacity: 1; transform: translateY(0);
-}
+.stat-item.show.data-v-dd383ca2 {
+  opacity: 1;
+  transform: translateY(0);
 }
 .stat-icon.data-v-dd383ca2 {
   width: 56rpx;
@@ -324,8 +324,13 @@ to { opacity: 1; transform: translateY(0);
   display: flex;
   align-items: center;
   padding: 28rpx 32rpx;
-  transition: background 0.2s;
-  animation: fadeInUp-dd383ca2 0.4s ease-out both;
+  transition: background 0.2s, opacity 0.4s ease-out, transform 0.4s ease-out;
+  opacity: 0;
+  transform: translateY(16rpx);
+}
+.menu-item.show.data-v-dd383ca2 {
+  opacity: 1;
+  transform: translateY(0);
 }
 .menu-item.data-v-dd383ca2:active {
   background: rgba(79,172,254,0.04);

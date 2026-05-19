@@ -17,7 +17,9 @@ const _sfc_main = {
     const sending = common_vendor.ref(false);
     const userAvatar = common_vendor.ref("");
     const composing = common_vendor.ref(false);
-    let recognition = null;
+    let recorderManager = null;
+    let h5MediaRecorder = null;
+    let isProcessingVoice = false;
     const addOptions = [
       { key: "photo", label: "照片", bg: "#ece5ff", color: "#7b6df0" }
     ];
@@ -25,16 +27,19 @@ const _sfc_main = {
       {
         role: "ai",
         type: "text",
+        show: true,
         title: "你好！我是你的计划助手 👋",
         content: "你可以告诉我你的计划，我会帮你安排到日程中，让你的每一天都更高效。",
         tip: "比如：明天上午10点开会，下午去健身，晚上学习2小时"
       }
     ]);
     common_vendor.computed(() => messages.value.length <= 2);
-    setTimeout(() => {
-      loaded.value = true;
-    }, 80);
     common_vendor.onMounted(() => {
+      common_vendor.nextTick$1(() => {
+        setTimeout(() => {
+          loaded.value = true;
+        }, 50);
+      });
       if (utils_api.getAccessToken()) {
         utils_api.getUnreadCount().then((res) => {
           utils_store.store.unreadCount = res.count || 0;
@@ -83,12 +88,12 @@ const _sfc_main = {
       if (!t || sending.value)
         return;
       sending.value = true;
-      messages.value.push({ role: "user", content: t });
+      messages.value.push({ role: "user", content: t, show: true });
       inputText.value = "";
       scroll();
       utils_api.sendChatMessage(t, sessionId.value || void 0).then((res) => {
         sessionId.value = res.sessionId;
-        messages.value.push({ role: "ai", type: "text", title: "", content: res.reply, tip: "" });
+        messages.value.push({ role: "ai", type: "text", title: "", content: res.reply, tip: "", show: true });
         scroll();
       }).catch((e) => {
         if (e && e.code === "UNAUTHORIZED") {
@@ -97,82 +102,173 @@ const _sfc_main = {
             common_vendor.index.navigateTo({ url: "/pages/login/login" });
           }, 800);
         } else {
-          messages.value.push({ role: "ai", type: "text", title: "", content: "网络异常，请稍后重试", tip: "" });
+          messages.value.push({ role: "ai", type: "text", title: "", content: "网络异常，请稍后重试", tip: "", show: true });
           scroll();
         }
       }).finally(() => {
         sending.value = false;
       });
     }
+    let recordStartTime = 0;
     function toggleVoice() {
       if (isRecording.value) {
+        if (Date.now() - recordStartTime < 800)
+          return;
         stopRecord();
       } else {
+        recordStartTime = Date.now();
         startRecord();
       }
     }
     function startRecord() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        common_vendor.index.showToast({ title: "当前浏览器不支持语音识别", icon: "none" });
+      if (!utils_api.getAccessToken()) {
+        common_vendor.index.showToast({ title: "请先登录", icon: "none" });
+        setTimeout(() => {
+          common_vendor.index.navigateTo({ url: "/pages/login/login" });
+        }, 800);
         return;
       }
       isRecording.value = true;
-      recognition = new SpeechRecognition();
-      recognition.lang = "zh-CN";
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.onresult = (e) => {
-        const text = e.results[0][0].transcript;
-        isRecording.value = false;
-        messages.value.push({ role: "user", content: "[语音] " + text });
-        scroll();
-        sending.value = true;
-        utils_api.sendChatMessage(text, sessionId.value || void 0).then((res) => {
-          sessionId.value = res.sessionId;
-          messages.value.push({ role: "ai", type: "text", title: "", content: res.reply, tip: "" });
-          scroll();
-        }).catch((e2) => {
-          if (e2 && e2.code === "UNAUTHORIZED") {
-            common_vendor.index.showToast({ title: "请先登录", icon: "none" });
-            setTimeout(() => {
-              common_vendor.index.navigateTo({ url: "/pages/login/login" });
-            }, 800);
-          } else {
-            messages.value.push({ role: "ai", type: "text", title: "", content: "网络异常，请稍后重试", tip: "" });
-            scroll();
+      const platform = common_vendor.index.getSystemInfoSync().platform;
+      if (platform !== "web") {
+        try {
+          if (!recorderManager) {
+            recorderManager = common_vendor.index.getRecorderManager();
+            recorderManager.onStop((res) => {
+              common_vendor.index.__f__("log", "at pages/index/index.vue:316", "recorderManager onStop:", JSON.stringify(res));
+              isRecording.value = false;
+              if (isProcessingVoice)
+                return;
+              if (res.tempFilePath) {
+                isProcessingVoice = true;
+                handleVoiceResult(res.tempFilePath);
+              }
+            });
+            recorderManager.onError((err) => {
+              common_vendor.index.__f__("error", "at pages/index/index.vue:325", "recorderManager onError:", JSON.stringify(err));
+              isRecording.value = false;
+              common_vendor.index.showToast({ title: "录音失败", icon: "none" });
+            });
           }
-        }).finally(() => {
-          sending.value = false;
-        });
-      };
-      recognition.onerror = () => {
+          recorderManager.start({
+            duration: 60,
+            sampleRate: 16e3,
+            numberOfChannels: 1,
+            encodeBitRate: 48e3,
+            format: "mp3"
+          });
+          return;
+        } catch (e) {
+          isRecording.value = false;
+          common_vendor.index.showToast({ title: "录音初始化失败", icon: "none" });
+          return;
+        }
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         isRecording.value = false;
-        common_vendor.index.showToast({ title: "语音识别失败", icon: "none" });
-      };
-      recognition.onend = () => {
+        common_vendor.index.showToast({ title: "当前环境不支持录音", icon: "none" });
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        const mr = new MediaRecorder(stream);
+        const chunks = [];
+        mr.ondataavailable = (e) => {
+          if (e.data.size > 0)
+            chunks.push(e.data);
+        };
+        mr.onstop = () => {
+          stream.getTracks().forEach((t) => t.stop());
+          isRecording.value = false;
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          uploadAndTranscribeBlob(blob);
+        };
+        mr.start();
+        h5MediaRecorder = mr;
+      }).catch(() => {
         isRecording.value = false;
-      };
-      recognition.start();
+        common_vendor.index.showToast({ title: "无法访问麦克风", icon: "none" });
+      });
     }
     function stopRecord() {
       if (!isRecording.value)
         return;
       isRecording.value = false;
-      if (recognition) {
-        recognition.stop();
-        recognition = null;
+      if (recorderManager) {
+        recorderManager.stop();
+      } else if (h5MediaRecorder && h5MediaRecorder.state === "recording") {
+        h5MediaRecorder.stop();
       }
     }
-    function onQuick(t) {
-      if (sending.value)
-        return;
-      sending.value = true;
-      messages.value.push({ role: "user", content: t });
+    function uploadAndTranscribeBlob(blob) {
+      messages.value.push({ role: "user", content: "[语音] 识别中...", show: true });
       scroll();
-      utils_api.sendChatMessage(t, sessionId.value || void 0).then((res) => {
+      const form = new FormData();
+      form.append("file", blob, "speech.webm");
+      const token = utils_api.getAccessToken();
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", utils_api.BASE_URL + "/api/v1/speech/transcribe");
+      xhr.setRequestHeader("Authorization", "Bearer " + token);
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const res = JSON.parse(xhr.responseText);
+            onTranscribeSuccess(res.text);
+          } catch (e) {
+            common_vendor.index.showToast({ title: "语音识别失败", icon: "none" });
+          }
+        } else if (xhr.status === 401) {
+          common_vendor.index.showToast({ title: "请先登录", icon: "none" });
+          setTimeout(() => {
+            common_vendor.index.navigateTo({ url: "/pages/login/login" });
+          }, 800);
+        } else {
+          try {
+            const err = JSON.parse(xhr.responseText);
+            common_vendor.index.showToast({ title: err.message || "语音识别失败", icon: "none" });
+          } catch (e) {
+            common_vendor.index.showToast({ title: "语音识别失败", icon: "none" });
+          }
+        }
+      };
+      xhr.onerror = function() {
+        common_vendor.index.showToast({ title: "网络连接失败", icon: "none" });
+      };
+      xhr.send(form);
+    }
+    function handleVoiceResult(filePath) {
+      common_vendor.index.__f__("log", "at pages/index/index.vue:417", "handleVoiceResult filePath:", filePath);
+      messages.value.push({ role: "user", content: "[语音] 识别中...", show: true });
+      scroll();
+      utils_api.transcribeAudio(filePath).then((res) => {
+        onTranscribeSuccess(res.text || "");
+      }).catch((e) => {
+        if (e && e.code === "UNAUTHORIZED") {
+          common_vendor.index.showToast({ title: "请先登录", icon: "none" });
+          setTimeout(() => {
+            common_vendor.index.navigateTo({ url: "/pages/login/login" });
+          }, 800);
+        } else {
+          common_vendor.index.showToast({ title: e.message || "语音识别失败", icon: "none" });
+        }
+      }).finally(() => {
+        isProcessingVoice = false;
+      });
+    }
+    function onTranscribeSuccess(text) {
+      if (!text) {
+        messages.value.push({ role: "ai", type: "text", title: "", content: "未识别到内容，请重试", tip: "", show: true });
+        scroll();
+        return;
+      }
+      const lastUserMsg = messages.value[messages.value.length - 1];
+      if (lastUserMsg && lastUserMsg.role === "user") {
+        lastUserMsg.content = "[语音] " + text;
+      }
+      scroll();
+      sending.value = true;
+      utils_api.sendChatMessage(text, sessionId.value || void 0).then((res) => {
         sessionId.value = res.sessionId;
-        messages.value.push({ role: "ai", type: "text", title: "", content: res.reply, tip: "" });
+        messages.value.push({ role: "ai", type: "text", title: "", content: res.reply, tip: "", show: true });
         scroll();
       }).catch((e) => {
         if (e && e.code === "UNAUTHORIZED") {
@@ -181,7 +277,31 @@ const _sfc_main = {
             common_vendor.index.navigateTo({ url: "/pages/login/login" });
           }, 800);
         } else {
-          messages.value.push({ role: "ai", type: "text", title: "", content: "网络异常，请稍后重试", tip: "" });
+          messages.value.push({ role: "ai", type: "text", title: "", content: "网络异常，请稍后重试", tip: "", show: true });
+          scroll();
+        }
+      }).finally(() => {
+        sending.value = false;
+      });
+    }
+    function onQuick(t) {
+      if (sending.value)
+        return;
+      sending.value = true;
+      messages.value.push({ role: "user", content: t, show: true });
+      scroll();
+      utils_api.sendChatMessage(t, sessionId.value || void 0).then((res) => {
+        sessionId.value = res.sessionId;
+        messages.value.push({ role: "ai", type: "text", title: "", content: res.reply, tip: "", show: true });
+        scroll();
+      }).catch((e) => {
+        if (e && e.code === "UNAUTHORIZED") {
+          common_vendor.index.showToast({ title: "请先登录", icon: "none" });
+          setTimeout(() => {
+            common_vendor.index.navigateTo({ url: "/pages/login/login" });
+          }, 800);
+        } else {
+          messages.value.push({ role: "ai", type: "text", title: "", content: "网络异常，请稍后重试", tip: "", show: true });
           scroll();
         }
       }).finally(() => {
@@ -273,7 +393,10 @@ const _sfc_main = {
           } : {}) : {}, {
             y: i,
             z: common_vendor.n(msg.role === "user" ? "align-right" : "align-left"),
-            A: i * 0.1 + "s"
+            A: common_vendor.n({
+              show: msg.show
+            }),
+            B: i * 0.06 + "s"
           });
         }),
         i: scrollTop.value,
@@ -293,24 +416,23 @@ const _sfc_main = {
         w: common_vendor.o(($event) => inputText.value = $event.detail.value)
       } : {
         x: common_vendor.t(isRecording.value ? "正在录音...点击停止" : "点击说话"),
-        y: isRecording.value ? 1 : "",
-        z: common_vendor.o(toggleVoice)
+        y: isRecording.value ? 1 : ""
       }, {
-        A: inputMode.value === "text"
+        z: inputMode.value === "text"
       }, inputMode.value === "text" ? {} : {}, {
-        B: common_vendor.o(toggleMode),
-        C: inputMode.value === "text"
+        A: common_vendor.o(toggleMode),
+        B: inputMode.value === "text"
       }, inputMode.value === "text" ? {
-        D: inputText.value.length > 0 ? 1 : "",
-        E: common_vendor.o(onSend)
+        C: inputText.value.length > 0 ? 1 : "",
+        D: common_vendor.o(onSend)
       } : {
-        F: isRecording.value ? 1 : "",
-        G: common_vendor.o(toggleVoice)
+        E: isRecording.value ? 1 : "",
+        F: common_vendor.o(toggleVoice)
       }, {
-        H: common_vendor.o(showAddMenu),
-        I: addVisible.value
+        G: common_vendor.o(showAddMenu),
+        H: addVisible.value
       }, addVisible.value ? {
-        J: common_vendor.f(addOptions, (a, k0, i0) => {
+        I: common_vendor.f(addOptions, (a, k0, i0) => {
           return {
             a: a.bg,
             b: common_vendor.t(a.label),
@@ -318,9 +440,9 @@ const _sfc_main = {
             d: common_vendor.o(($event) => onAdd(a.key), a.key)
           };
         }),
-        K: common_vendor.o(() => {
+        J: common_vendor.o(() => {
         }),
-        L: common_vendor.o(($event) => addVisible.value = false)
+        K: common_vendor.o(($event) => addVisible.value = false)
       } : {});
     };
   }

@@ -40,8 +40,7 @@
         class="notify-card"
         v-for="(item, i) in notifications"
         :key="item.id"
-        :class="{ unread: !item.readAt }"
-        :class="{ show: loaded }"
+        :class="[{ unread: !item.readAt }, { show: loaded }]"
         :style="{ transitionDelay: (i * 0.06) + 's' }"
         @tap="onTapNotify(item)"
       >
@@ -225,7 +224,6 @@ function formatTime(dateStr) {
 .notify-card:active { transform: scale(0.98); }
 .notify-card.unread {
   border-left: 6rpx solid #ffa500;
-}
 }
 
 .notify-dot {

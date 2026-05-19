@@ -15,9 +15,13 @@ const _sfc_main = {
       { label: "已完成", value: "DONE" },
       { label: "已取消", value: "CANCELLED" }
     ];
-    setTimeout(() => {
-      loaded.value = true;
-    }, 80);
+    common_vendor.onMounted(() => {
+      common_vendor.nextTick$1(() => {
+        setTimeout(() => {
+          loaded.value = true;
+        }, 50);
+      });
+    });
     common_vendor.onMounted(() => {
       loadTasks();
     });

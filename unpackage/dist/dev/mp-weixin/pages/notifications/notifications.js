@@ -9,9 +9,13 @@ const _sfc_main = {
     const loading = common_vendor.ref(false);
     const refreshing = common_vendor.ref(false);
     const notifications = common_vendor.ref([]);
-    setTimeout(() => {
-      loaded.value = true;
-    }, 80);
+    common_vendor.onMounted(() => {
+      common_vendor.nextTick$1(() => {
+        setTimeout(() => {
+          loaded.value = true;
+        }, 50);
+      });
+    });
     common_vendor.onMounted(() => {
       loadNotifications();
     });
@@ -108,13 +112,18 @@ const _sfc_main = {
             e: common_vendor.t(item.body),
             f: common_vendor.t(formatTime(item.createdAt)),
             g: item.id,
-            h: !item.readAt ? 1 : "",
+            h: common_vendor.n({
+              unread: !item.readAt
+            }),
             i: i * 0.06 + "s",
             j: common_vendor.o(($event) => onTapNotify(item), item.id)
           });
         }),
-        g: refreshing.value,
-        h: common_vendor.o(onRefresh)
+        g: common_vendor.n({
+          show: loaded.value
+        }),
+        h: refreshing.value,
+        i: common_vendor.o(onRefresh)
       });
     };
   }
