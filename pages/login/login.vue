@@ -205,7 +205,9 @@ async function onLogin() {
   }
   logging.value = true
   try {
-    const res = await login(loginForm.value.email, loginForm.value.password)
+    await login(loginForm.value.email, loginForm.value.password)
+    const { onAuthSuccess } = await import('../../utils/afterAuth.js')
+    onAuthSuccess()
     uni.showToast({ title: '登录成功', icon: 'success' })
     setTimeout(() => uni.reLaunch({ url: '/pages/index/index' }), 1000)
   } catch (e) {
