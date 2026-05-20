@@ -1,4 +1,7 @@
 // API 基础配置
+import { clearAllChatHistory } from './chatHistory.js'
+import { getOrCreateDeviceId } from './deviceId.js'
+
 const BASE_URL = 'http://192.168.3.3:8080'
 
 // 获取存储的令牌
@@ -25,6 +28,7 @@ function clearTokens() {
   uni.removeStorageSync('uid')
   uni.removeStorageSync('isLogin')
   uni.removeStorageSync('userInfo')
+  clearAllChatHistory()
 }
 
 // 统一请求方法
@@ -99,6 +103,7 @@ function refreshToken() {
       success: (res) => {
         if (res.statusCode === 200 && res.data) {
           saveTokens(res.data)
+          import('./websocket.js').then(m => m.reconnect())
           resolve(res.data)
         } else {
           clearTokens()
@@ -230,14 +235,44 @@ export function getUserInfo() {
   })
 }
 
-// 登出
+// 登出（先注销 FCM，再断 WS，再清 token — 文档 7.5）
 export function logout(allDevices = false) {
+  const deviceId = getOrCreateDeviceId()
+  const pushUrl = allDevices
+    ? '/api/v1/users/me/push-tokens'
+    : '/api/v1/users/me/push-tokens?deviceId=' + encodeURIComponent(deviceId)
+
+  return request({ url: pushUrl, method: 'DELETE', auth: true })
+    .catch(() => {})
+    .then(() => request({
+      url: '/api/v1/auth/logout',
+      data: { allDevices },
+      auth: true
+    }))
+    .catch(() => {})
+    .finally(() => {
+      import('./websocket.js').then(m => m.disconnect())
+      clearTokens()
+    })
+}
+
+// ============ FCM 推送 token（文档 6.2 / 6.3） ============
+
+export function registerPushToken({ platform, token, deviceId }) {
   return request({
-    url: '/api/v1/auth/logout',
-    data: { allDevices },
+    url: '/api/v1/users/me/push-tokens',
+    method: 'PUT',
+    data: { platform, token, deviceId },
     auth: true
-  }).finally(() => {
-    clearTokens()
+  })
+}
+
+export function deletePushToken(deviceId) {
+  const q = deviceId ? '?deviceId=' + encodeURIComponent(deviceId) : ''
+  return request({
+    url: '/api/v1/users/me/push-tokens' + q,
+    method: 'DELETE',
+    auth: true
   })
 }
 
@@ -303,11 +338,91 @@ export function sendChatMessage(message, sessionId, provider) {
   })
 }
 
-// 拉取会话历史消息
-export function getChatMessages(sessionId) {
+// 用户历史会话列表（按最近更新倒序）
+export function getChatSessions(page = 0, size = 20) {
   return request({
-    url: '/api/v1/ai/chat/sessions/' + sessionId + '/messages',
+    url: '/api/v1/ai/chat/sessions?page=' + page + '&size=' + size,
     method: 'GET',
+    auth: true
+  })
+}
+
+// 某会话的消息（按时间升序分页）
+export function getChatMessages(sessionId, page = 0, size = 50) {
+  return request({
+    url: '/api/v1/ai/chat/sessions/' + sessionId + '/messages?page=' + page + '&size=' + size,
+    method: 'GET',
+    auth: true
+  })
+}
+
+// 拉取某会话全部消息（自动翻页）
+export function fetchAllChatMessages(sessionId, size = 50) {
+  let page = 0
+  let allMessages = []
+  let sessionTitle = ''
+  let sessionIdOut = sessionId
+  let hasNext = true
+
+  const loadPage = () => {
+    return getChatMessages(sessionId, page, size).then(data => {
+      sessionTitle = data.sessionTitle || sessionTitle
+      sessionIdOut = data.sessionId != null ? data.sessionId : sessionIdOut
+      const batch = data.messages || []
+      allMessages = allMessages.concat(batch)
+      hasNext = !!data.hasNext
+      if (hasNext) {
+        page += 1
+        if (page > 200) return { sessionId: sessionIdOut, sessionTitle, messages: allMessages }
+        return loadPage()
+      }
+      return { sessionId: sessionIdOut, sessionTitle, messages: allMessages }
+    })
+  }
+
+  return loadPage()
+}
+
+// 解析媒体 URL（相对路径补全为 BASE_URL）
+export function resolveMediaUrl(url) {
+  if (!url) return ''
+  if (/^(https?:|wxfile:|file:|blob:|data:)/.test(url)) return url
+  return BASE_URL + (url.startsWith('/') ? url : '/' + url)
+}
+
+// ============ 成长计划草案 ============
+
+export function getPlanProposal(proposalId) {
+  return request({
+    url: '/api/v1/growth/plan-proposals/' + proposalId,
+    method: 'GET',
+    auth: true
+  })
+}
+
+// 某会话下的计划草案列表（用于历史对话还原；若无此接口则返回空列表）
+export function getPlanProposalsBySession(sessionId) {
+  return request({
+    url: '/api/v1/growth/plan-proposals?sessionId=' + sessionId,
+    method: 'GET',
+    auth: true
+  })
+}
+
+export function confirmPlanProposal(proposalId) {
+  return request({
+    url: '/api/v1/growth/plan-proposals/' + proposalId + '/confirm',
+    method: 'POST',
+    data: {},
+    auth: true
+  })
+}
+
+export function rejectPlanProposal(proposalId) {
+  return request({
+    url: '/api/v1/growth/plan-proposals/' + proposalId + '/reject',
+    method: 'POST',
+    data: {},
     auth: true
   })
 }
@@ -335,8 +450,8 @@ export function getUnreadCount() {
   })
 }
 
-// 通知列表
-export function getNotifications(unreadOnly) {
+// 通知列表（unreadOnly=true 为未读收件箱；默认 false 为含已读历史）
+export function getNotifications(unreadOnly = false) {
   const params = unreadOnly ? '?unreadOnly=true' : ''
   return request({
     url: '/api/v1/users/me/notifications' + params,

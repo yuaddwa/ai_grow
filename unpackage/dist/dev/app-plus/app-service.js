@@ -31,6 +31,8 @@ if (uni.restoreGlobal) {
 }
 (function(vue) {
   "use strict";
+  const ON_SHOW = "onShow";
+  const ON_LOAD = "onLoad";
   function formatAppLog(type, filename, ...args) {
     if (uni.__log__) {
       uni.__log__(type, filename, ...args);
@@ -41,6 +43,19 @@ if (uni.restoreGlobal) {
   function resolveEasycom(component, easycom) {
     return typeof component === "string" ? easycom : component;
   }
+  const createLifeCycleHook = (lifecycle, flag = 0) => (hook, target = vue.getCurrentInstance()) => {
+    !vue.isInSSRComponentSetup && vue.injectHook(lifecycle, hook, target);
+  };
+  const onShow = /* @__PURE__ */ createLifeCycleHook(
+    ON_SHOW,
+    1 | 2
+    /* HookFlags.PAGE */
+  );
+  const onLoad = /* @__PURE__ */ createLifeCycleHook(
+    ON_LOAD,
+    2
+    /* HookFlags.PAGE */
+  );
   function isTableRow(line) {
     return line.startsWith("|") && line.includes("|");
   }
@@ -426,6 +441,140 @@ if (uni.restoreGlobal) {
     ]);
   }
   const __easycom_0 = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["render", _sfc_render$8], ["__scopeId", "data-v-00310203"], ["__file", "E:/HTML/ai_grow/components/markdown-content/markdown-content.vue"]]);
+  const scriptRel = "modulepreload";
+  const assetsURL = function(dep) {
+    return "/" + dep;
+  };
+  const seen = {};
+  const __vitePreload = function preload(baseModule, deps, importerUrl) {
+    let promise = Promise.resolve();
+    if (false) {
+      const links = document.getElementsByTagName("link");
+      const cspNonceMeta = document.querySelector("meta[property=csp-nonce]");
+      const cspNonce = (cspNonceMeta == null ? void 0 : cspNonceMeta.nonce) || (cspNonceMeta == null ? void 0 : cspNonceMeta.getAttribute("nonce"));
+      promise = Promise.all(deps.map((dep) => {
+        dep = assetsURL(dep);
+        if (dep in seen)
+          return;
+        seen[dep] = true;
+        const isCss = dep.endsWith(".css");
+        const cssSelector = isCss ? '[rel="stylesheet"]' : "";
+        const isBaseRelative = !!importerUrl;
+        if (isBaseRelative) {
+          for (let i = links.length - 1; i >= 0; i--) {
+            const link2 = links[i];
+            if (link2.href === dep && (!isCss || link2.rel === "stylesheet")) {
+              return;
+            }
+          }
+        } else if (document.querySelector(`link[href="${dep}"]${cssSelector}`)) {
+          return;
+        }
+        const link = document.createElement("link");
+        link.rel = isCss ? "stylesheet" : scriptRel;
+        if (!isCss) {
+          link.as = "script";
+          link.crossOrigin = "";
+        }
+        link.href = dep;
+        if (cspNonce) {
+          link.setAttribute("nonce", cspNonce);
+        }
+        document.head.appendChild(link);
+        if (isCss) {
+          return new Promise((res, rej) => {
+            link.addEventListener("load", res);
+            link.addEventListener("error", () => rej(new Error(`Unable to preload CSS for ${dep}`)));
+          });
+        }
+      }));
+    }
+    return promise.then(() => baseModule()).catch((err) => {
+      const e = new Event("vite:preloadError", { cancelable: true });
+      e.payload = err;
+      window.dispatchEvent(e);
+      if (!e.defaultPrevented) {
+        throw err;
+      }
+    });
+  };
+  const CACHE_KEY = "ai_chat_sessions_cache";
+  const CURRENT_KEY = "ai_chat_current_session_id";
+  const MAX_CACHED_SESSIONS = 10;
+  function readCache() {
+    try {
+      const raw = uni.getStorageSync(CACHE_KEY);
+      return raw && typeof raw === "object" ? raw : {};
+    } catch (e) {
+      return {};
+    }
+  }
+  function writeCache(map) {
+    uni.setStorageSync(CACHE_KEY, map);
+  }
+  function isSessionCached(sessionId) {
+    const map = readCache();
+    const data = map[String(sessionId)];
+    return !!(data && Array.isArray(data.messages) && data.messages.length > 0);
+  }
+  function getCachedSession(sessionId) {
+    const map = readCache();
+    return map[String(sessionId)] || null;
+  }
+  function setCachedSession(sessionId, data) {
+    if (!sessionId || !data)
+      return;
+    const id = String(sessionId);
+    const map = readCache();
+    map[id] = {
+      sessionId: data.sessionId ?? sessionId,
+      sessionTitle: data.sessionTitle || "新对话",
+      messages: data.messages || [],
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    const keys = Object.keys(map);
+    if (keys.length > MAX_CACHED_SESSIONS) {
+      const sorted = keys.sort((a, b) => {
+        const ta = new Date(map[a] && map[a].updatedAt || 0).getTime();
+        const tb = new Date(map[b] && map[b].updatedAt || 0).getTime();
+        return tb - ta;
+      });
+      while (Object.keys(map).length > MAX_CACHED_SESSIONS) {
+        const removeKey = sorted.pop();
+        if (removeKey && removeKey !== id)
+          delete map[removeKey];
+        else
+          break;
+      }
+    }
+    writeCache(map);
+  }
+  function saveCurrentSessionId(sessionId) {
+    if (sessionId)
+      uni.setStorageSync(CURRENT_KEY, sessionId);
+  }
+  function getCurrentSessionId() {
+    const v = uni.getStorageSync(CURRENT_KEY);
+    return v || null;
+  }
+  function clearCurrentSessionId() {
+    uni.removeStorageSync(CURRENT_KEY);
+  }
+  function clearAllChatHistory() {
+    uni.removeStorageSync(CACHE_KEY);
+    uni.removeStorageSync(CURRENT_KEY);
+  }
+  const STORAGE_KEY = "clientDeviceId";
+  function getOrCreateDeviceId() {
+    let id = uni.getStorageSync(STORAGE_KEY);
+    if (id && typeof id === "string" && id.length <= 64)
+      return id;
+    id = "d_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 12);
+    if (id.length > 64)
+      id = id.slice(0, 64);
+    uni.setStorageSync(STORAGE_KEY, id);
+    return id;
+  }
   const BASE_URL = "http://192.168.3.3:8080";
   function getAccessToken() {
     return uni.getStorageSync("accessToken") || "";
@@ -448,6 +597,7 @@ if (uni.restoreGlobal) {
     uni.removeStorageSync("uid");
     uni.removeStorageSync("isLogin");
     uni.removeStorageSync("userInfo");
+    clearAllChatHistory();
   }
   function request(options) {
     return new Promise((resolve, reject) => {
@@ -513,6 +663,7 @@ if (uni.restoreGlobal) {
         success: (res) => {
           if (res.statusCode === 200 && res.data) {
             saveTokens(res.data);
+            __vitePreload(() => Promise.resolve().then(() => websocket), false ? "__VITE_PRELOAD__" : void 0).then((m) => m.reconnect());
             resolve(res.data);
           } else {
             clearTokens();
@@ -614,12 +765,25 @@ if (uni.restoreGlobal) {
     });
   }
   function logout(allDevices = false) {
-    return request({
+    const deviceId = getOrCreateDeviceId();
+    const pushUrl = allDevices ? "/api/v1/users/me/push-tokens" : "/api/v1/users/me/push-tokens?deviceId=" + encodeURIComponent(deviceId);
+    return request({ url: pushUrl, method: "DELETE", auth: true }).catch(() => {
+    }).then(() => request({
       url: "/api/v1/auth/logout",
       data: { allDevices },
       auth: true
+    })).catch(() => {
     }).finally(() => {
+      __vitePreload(() => Promise.resolve().then(() => websocket), false ? "__VITE_PRELOAD__" : void 0).then((m) => m.disconnect());
       clearTokens();
+    });
+  }
+  function registerPushToken({ platform, token, deviceId }) {
+    return request({
+      url: "/api/v1/users/me/push-tokens",
+      method: "PUT",
+      data: { platform, token, deviceId },
+      auth: true
     });
   }
   function transcribeAudio(filePath) {
@@ -651,10 +815,10 @@ if (uni.restoreGlobal) {
           },
           fail: (err) => {
             const msg = err && err.errMsg || "";
-            formatAppLog("error", "at utils/api.js:279", "transcribeAudio upload fail:", msg);
+            formatAppLog("error", "at utils/api.js:314", "transcribeAudio upload fail:", msg);
             if (msg.includes("exceed max upload") && tried < 3) {
               tried++;
-              formatAppLog("warn", "at utils/api.js:282", "uploadFile retry", tried, "in", tried * 500, "ms");
+              formatAppLog("warn", "at utils/api.js:317", "uploadFile retry", tried, "in", tried * 500, "ms");
               setTimeout(doUpload, tried * 500);
             } else {
               reject({ code: "NETWORK_ERROR", message: msg.includes("fail") ? "上传失败，请检查网络" : "上传失败" });
@@ -677,6 +841,81 @@ if (uni.restoreGlobal) {
       auth: true
     });
   }
+  function getChatSessions(page = 0, size = 20) {
+    return request({
+      url: "/api/v1/ai/chat/sessions?page=" + page + "&size=" + size,
+      method: "GET",
+      auth: true
+    });
+  }
+  function getChatMessages(sessionId, page = 0, size = 50) {
+    return request({
+      url: "/api/v1/ai/chat/sessions/" + sessionId + "/messages?page=" + page + "&size=" + size,
+      method: "GET",
+      auth: true
+    });
+  }
+  function fetchAllChatMessages(sessionId, size = 50) {
+    let page = 0;
+    let allMessages = [];
+    let sessionTitle = "";
+    let sessionIdOut = sessionId;
+    let hasNext = true;
+    const loadPage = () => {
+      return getChatMessages(sessionId, page, size).then((data) => {
+        sessionTitle = data.sessionTitle || sessionTitle;
+        sessionIdOut = data.sessionId != null ? data.sessionId : sessionIdOut;
+        const batch = data.messages || [];
+        allMessages = allMessages.concat(batch);
+        hasNext = !!data.hasNext;
+        if (hasNext) {
+          page += 1;
+          if (page > 200)
+            return { sessionId: sessionIdOut, sessionTitle, messages: allMessages };
+          return loadPage();
+        }
+        return { sessionId: sessionIdOut, sessionTitle, messages: allMessages };
+      });
+    };
+    return loadPage();
+  }
+  function resolveMediaUrl(url) {
+    if (!url)
+      return "";
+    if (/^(https?:|wxfile:|file:|blob:|data:)/.test(url))
+      return url;
+    return BASE_URL + (url.startsWith("/") ? url : "/" + url);
+  }
+  function getPlanProposal(proposalId) {
+    return request({
+      url: "/api/v1/growth/plan-proposals/" + proposalId,
+      method: "GET",
+      auth: true
+    });
+  }
+  function getPlanProposalsBySession(sessionId) {
+    return request({
+      url: "/api/v1/growth/plan-proposals?sessionId=" + sessionId,
+      method: "GET",
+      auth: true
+    });
+  }
+  function confirmPlanProposal(proposalId) {
+    return request({
+      url: "/api/v1/growth/plan-proposals/" + proposalId + "/confirm",
+      method: "POST",
+      data: {},
+      auth: true
+    });
+  }
+  function rejectPlanProposal(proposalId) {
+    return request({
+      url: "/api/v1/growth/plan-proposals/" + proposalId + "/reject",
+      method: "POST",
+      data: {},
+      auth: true
+    });
+  }
   function getMyTasks(status) {
     const params = status ? "?status=" + status : "";
     return request({
@@ -692,7 +931,7 @@ if (uni.restoreGlobal) {
       auth: true
     });
   }
-  function getNotifications(unreadOnly) {
+  function getNotifications(unreadOnly = false) {
     const params = unreadOnly ? "?unreadOnly=true" : "";
     return request({
       url: "/api/v1/users/me/notifications" + params,
@@ -715,6 +954,80 @@ if (uni.restoreGlobal) {
     });
   }
   const store = vue.reactive({ unreadCount: 0 });
+  function refreshUnreadCount() {
+    if (!getAccessToken()) {
+      store.unreadCount = 0;
+      return Promise.resolve(0);
+    }
+    return getUnreadCount().then((res) => {
+      store.unreadCount = res.count || 0;
+      return store.unreadCount;
+    }).catch(() => {
+      store.unreadCount = 0;
+      return 0;
+    });
+  }
+  const chatReplyListeners = [];
+  const notifyListeners = [];
+  function onChatReply(fn) {
+    chatReplyListeners.push(fn);
+    return () => {
+      const i = chatReplyListeners.indexOf(fn);
+      if (i >= 0)
+        chatReplyListeners.splice(i, 1);
+    };
+  }
+  function onNotificationsChanged(fn) {
+    notifyListeners.push(fn);
+    return () => {
+      const i = notifyListeners.indexOf(fn);
+      if (i >= 0)
+        notifyListeners.splice(i, 1);
+    };
+  }
+  function emitNotifyChange() {
+    notifyListeners.forEach((fn) => {
+      try {
+        fn();
+      } catch (e) {
+      }
+    });
+  }
+  function handleRealtimeMessage(data) {
+    if (!data)
+      return;
+    if (data.unreadCount !== void 0 && data.type == null) {
+      store.unreadCount = Number(data.unreadCount) || 0;
+      return;
+    }
+    if (!data.type)
+      return;
+    switch (data.type) {
+      case "TASK_DUE_REMINDER":
+      case "WEEKLY_COMPANION_DIGEST":
+        if (data.unreadCount !== void 0) {
+          store.unreadCount = Number(data.unreadCount) || 0;
+        } else {
+          refreshUnreadCount();
+        }
+        emitNotifyChange();
+        if (data.title) {
+          uni.showToast({ title: data.title, icon: "none", duration: 2500 });
+        }
+        break;
+      case "CHAT_REPLY":
+        if (data.unreadCount !== void 0) {
+          store.unreadCount = Number(data.unreadCount) || 0;
+        }
+        chatReplyListeners.forEach((fn) => {
+          try {
+            fn(data);
+          } catch (e) {
+          }
+        });
+        break;
+    }
+  }
   const MIN_RECORD_MS = 800;
   const _sfc_main$8 = {
     __name: "index",
@@ -732,7 +1045,16 @@ if (uni.restoreGlobal) {
       const sending = vue.ref(false);
       const userAvatar = vue.ref("");
       const composing = vue.ref(false);
+      const historyVisible = vue.ref(false);
+      const sessionList = vue.ref([]);
+      const loadingSession = vue.ref(false);
+      const loadingSessions = vue.ref(false);
+      const sessionsRefreshing = vue.ref(false);
+      const sessionsPage = vue.ref(0);
+      const sessionsHasNext = vue.ref(false);
+      const playingVoiceKey = vue.ref(null);
       let recorderManager = null;
+      let innerAudioContext = null;
       let h5MediaRecorder = null;
       let isProcessingVoice = false;
       let touchRecording = false;
@@ -740,17 +1062,32 @@ if (uni.restoreGlobal) {
       const addOptions = [
         { key: "photo", label: "照片", bg: "#ece5ff", color: "#7b6df0" }
       ];
-      const messages = vue.ref([
-        {
-          role: "ai",
-          type: "text",
-          show: true,
-          title: "你好！我是你的计划助手 👋",
-          content: "你可以告诉我你的计划，我会帮你安排到日程中，让你的每一天都更高效。",
-          tip: "比如：明天上午10点开会，下午去健身，晚上学习2小时"
-        }
-      ]);
+      const WELCOME_MESSAGE = {
+        role: "ai",
+        type: "text",
+        show: true,
+        title: "你好！我是你的计划助手 👋",
+        content: "你可以告诉我你的计划，我会帮你安排到日程中，让你的每一天都更高效。",
+        tip: "比如：明天上午10点开会，下午去健身，晚上学习2小时"
+      };
+      function getWelcomeMessages() {
+        return [{ ...WELCOME_MESSAGE }];
+      }
+      const messages = vue.ref(getWelcomeMessages());
       const showTags = vue.computed(() => messages.value.length <= 2);
+      function openPendingSessionIfAny() {
+        const pending = uni.getStorageSync("pendingOpenSessionId");
+        if (!pending || !getAccessToken())
+          return;
+        uni.removeStorageSync("pendingOpenSessionId");
+        loadSession(pending, true);
+      }
+      onShow(() => {
+        if (getAccessToken()) {
+          refreshUnreadCount();
+          openPendingSessionIfAny();
+        }
+      });
       vue.onMounted(() => {
         vue.nextTick(() => {
           setTimeout(() => {
@@ -758,21 +1095,543 @@ if (uni.restoreGlobal) {
           }, 50);
         });
         if (getAccessToken()) {
-          getUnreadCount().then((res) => {
-            store.unreadCount = res.count || 0;
-          }).catch(() => {
-          });
+          refreshUnreadCount();
           getUserInfo().then((res) => {
             if (res.avatarUrl) {
               userAvatar.value = res.avatarUrl.replace(/^https?:\/\/[^\/]+/, BASE_URL);
             }
           }).catch(() => {
           });
+          onChatReply((data) => {
+            if (!data.sessionId)
+              return;
+            if (sessionId.value && String(data.sessionId) === String(sessionId.value)) {
+              loadSession(data.sessionId, true);
+            }
+            if (historyVisible.value)
+              refreshSessions();
+          });
+          const pending = uni.getStorageSync("pendingOpenSessionId");
+          if (pending) {
+            openPendingSessionIfAny();
+          } else {
+            const cur = getCurrentSessionId();
+            if (cur)
+              loadSession(cur, true);
+          }
         }
       });
       function scroll() {
         vue.nextTick(() => {
           scrollTop.value = Math.random() * 99999;
+        });
+      }
+      function pickVoiceUrl(m) {
+        if (!m)
+          return "";
+        return m.voiceUrl || m.audioUrl || m.voiceUrls && m.voiceUrls[0] || "";
+      }
+      function pickProposalIdFromMessage(m) {
+        if (!m)
+          return null;
+        if (m.proposalId != null)
+          return m.proposalId;
+        if (m.planProposalId != null)
+          return m.planProposalId;
+        if (m.planProposal && m.planProposal.proposalId != null)
+          return m.planProposal.proposalId;
+        return null;
+      }
+      function looksLikePlanDraftReply(content) {
+        if (!content)
+          return false;
+        return /草案|确认计划|计划草案/.test(content);
+      }
+      function createPlanProposalShell({ id, content, proposalId, status, hint }) {
+        const st = status || hint && hint.status || "PENDING";
+        const resolved = st !== "PENDING";
+        return {
+          role: "ai",
+          type: "planProposal",
+          content: content || "",
+          proposalId,
+          status: st,
+          detail: null,
+          loading: true,
+          resolved,
+          resultMessage: resolved ? proposalResultMessage(st, hint) : "",
+          acting: false,
+          show: true,
+          id
+        };
+      }
+      function proposalResultMessage(status, detail) {
+        if (status === "CONFIRMED") {
+          return detail && detail.planId ? "计划已确认，已写入日程" : "计划已确认";
+        }
+        if (status === "REJECTED")
+          return "已拒绝该计划草案";
+        if (status === "EXPIRED")
+          return "计划草案已过期";
+        return proposalStatusText(status);
+      }
+      function applyProposalDetail(msg, detail) {
+        msg.detail = detail;
+        msg.status = detail.status || msg.status;
+        if (detail.status === "PENDING") {
+          msg.resolved = false;
+          msg.resultMessage = "";
+        } else {
+          msg.resolved = true;
+          msg.resultMessage = proposalResultMessage(detail.status, detail);
+        }
+      }
+      function mapApiMessage(m) {
+        const role = m.role === "USER" ? "user" : "ai";
+        if (role === "ai") {
+          const proposalId = pickProposalIdFromMessage(m);
+          if (proposalId != null) {
+            return createPlanProposalShell({
+              id: m.id,
+              content: m.content || "",
+              proposalId,
+              status: m.planProposal && m.planProposal.status || m.proposalStatus,
+              hint: m.planProposal
+            });
+          }
+          return { role: "ai", type: "text", title: "", content: m.content || "", tip: "", show: true, id: m.id };
+        }
+        const voiceUrl = pickVoiceUrl(m);
+        const content = m.content || "";
+        const isVoice = !!voiceUrl || /^\[语音\]/.test(content);
+        return {
+          role: "user",
+          content,
+          voiceUrl,
+          isVoice,
+          show: true,
+          id: m.id
+        };
+      }
+      function mapApiToMessages(apiData) {
+        return (apiData.messages || []).map(mapApiMessage);
+      }
+      function deriveSessionTitle() {
+        const userMsg = [...messages.value].reverse().find(
+          (m) => m.role === "user" && m.content && !m.content.includes("识别中")
+        );
+        if (userMsg) {
+          const t = userMsg.content.replace(/^\[语音\]\s*/, "").trim();
+          if (t)
+            return t.slice(0, 40);
+        }
+        return "新对话";
+      }
+      function pushAiLoading() {
+        removeAiLoading();
+        messages.value.push({ role: "ai", type: "loading", show: true });
+        scroll();
+      }
+      function removeAiLoading() {
+        for (let i = messages.value.length - 1; i >= 0; i--) {
+          if (messages.value[i].type === "loading") {
+            messages.value.splice(i, 1);
+            break;
+          }
+        }
+      }
+      function persistSession() {
+        if (!sessionId.value || !getAccessToken())
+          return;
+        const sid = sessionId.value;
+        const title = deriveSessionTitle();
+        setCachedSession(sid, {
+          sessionId: sid,
+          sessionTitle: title,
+          messages: messages.value.filter((m) => m.type !== "loading")
+        });
+        saveCurrentSessionId(sid);
+      }
+      function mapSessionItem(s) {
+        return {
+          id: s.sessionId != null ? s.sessionId : s.id,
+          title: s.title || s.sessionTitle || "新对话",
+          updatedAt: s.updatedAt || s.createdAt,
+          provider: s.provider,
+          model: s.model
+        };
+      }
+      function applySessionsPage(data, append) {
+        const raw = data.items || data.content || data.sessions || [];
+        const items = raw.map(mapSessionItem);
+        sessionList.value = append ? sessionList.value.concat(items) : items;
+        sessionsHasNext.value = !!data.hasNext;
+      }
+      function onSessionsRefresh() {
+        sessionsRefreshing.value = true;
+        refreshSessions();
+      }
+      function refreshSessions() {
+        if (!getAccessToken())
+          return Promise.resolve();
+        loadingSessions.value = true;
+        sessionsPage.value = 0;
+        return getChatSessions(0, 20).then((data) => {
+          applySessionsPage(data, false);
+        }).catch(() => {
+          uni.showToast({ title: "加载会话列表失败", icon: "none" });
+        }).finally(() => {
+          loadingSessions.value = false;
+          sessionsRefreshing.value = false;
+        });
+      }
+      function loadMoreSessions() {
+        if (!sessionsHasNext.value || loadingSessions.value || !getAccessToken())
+          return;
+        loadingSessions.value = true;
+        const page = sessionsPage.value + 1;
+        getChatSessions(page, 20).then((data) => {
+          applySessionsPage(data, true);
+          sessionsPage.value = page;
+        }).catch(() => {
+          uni.showToast({ title: "加载更多失败", icon: "none" });
+        }).finally(() => {
+          loadingSessions.value = false;
+        });
+      }
+      function mergeCachedPlanProposals(sid, list) {
+        const cached = getCachedSession(sid);
+        if (!cached || !cached.messages)
+          return list;
+        const byMsgId = {};
+        cached.messages.forEach((m) => {
+          if (m.type === "planProposal" && m.proposalId != null && m.id != null) {
+            byMsgId[m.id] = m;
+          }
+        });
+        return list.map((m) => {
+          if (m.role !== "ai" || m.type === "planProposal")
+            return m;
+          const hit = byMsgId[m.id];
+          if (hit)
+            return { ...hit, show: true, loading: true };
+          return m;
+        });
+      }
+      function enrichPlanProposalsForSession(sessionId2, list) {
+        return getPlanProposalsBySession(sessionId2).then((res) => {
+          const proposals = res.items || res.proposals || res.content || [];
+          if (!proposals.length)
+            return list;
+          const next = list.slice();
+          const used = /* @__PURE__ */ new Set();
+          proposals.forEach((p) => {
+            const pid = p.proposalId != null ? p.proposalId : p.id;
+            if (pid == null)
+              return;
+            let idx = next.findIndex(
+              (m, i) => !used.has(i) && m.role === "ai" && (m.id === p.assistantMessageId || m.id === p.messageId)
+            );
+            if (idx < 0) {
+              idx = next.findIndex(
+                (m, i) => !used.has(i) && m.role === "ai" && m.type === "text" && looksLikePlanDraftReply(m.content)
+              );
+            }
+            if (idx < 0)
+              return;
+            used.add(idx);
+            next[idx] = createPlanProposalShell({
+              id: next[idx].id,
+              content: next[idx].content || "",
+              proposalId: pid,
+              status: p.status,
+              hint: p
+            });
+          });
+          return next;
+        }).catch(() => list);
+      }
+      function hydratePlanProposalMessages(list) {
+        const jobs = list.map((msg) => {
+          if (msg.type !== "planProposal" || msg.proposalId == null)
+            return Promise.resolve();
+          msg.loading = true;
+          return getPlanProposal(msg.proposalId).then((detail) => applyProposalDetail(msg, detail)).catch(() => {
+            if (!msg.detail && msg.status && msg.status !== "PENDING") {
+              msg.resolved = true;
+              msg.resultMessage = proposalResultMessage(msg.status, null);
+            }
+          }).finally(() => {
+            msg.loading = false;
+          });
+        });
+        return Promise.all(jobs).then(() => list);
+      }
+      function mergeVoiceFromCache(sid, uiMessages) {
+        const cached = getCachedSession(sid);
+        if (!cached || !cached.messages)
+          return uiMessages;
+        const voiceById = {};
+        const voiceByContent = [];
+        cached.messages.forEach((m) => {
+          if (!m.voiceUrl)
+            return;
+          if (m.id != null)
+            voiceById[m.id] = m.voiceUrl;
+          else if (m.content)
+            voiceByContent.push({ content: m.content, voiceUrl: m.voiceUrl });
+        });
+        return uiMessages.map((m) => {
+          if (m.role !== "user" || m.voiceUrl)
+            return m;
+          let voiceUrl = m.id != null ? voiceById[m.id] : "";
+          if (!voiceUrl && m.content) {
+            const hit = voiceByContent.find((v) => v.content === m.content);
+            if (hit)
+              voiceUrl = hit.voiceUrl;
+          }
+          if (!voiceUrl)
+            return m;
+          return { ...m, voiceUrl, isVoice: true };
+        });
+      }
+      function formatMinutes(m) {
+        if (m == null || m === "")
+          return "";
+        const n = Number(m);
+        if (isNaN(n))
+          return "";
+        if (n >= 60) {
+          const h = Math.floor(n / 60);
+          const rest = n % 60;
+          return rest ? h + "小时" + rest + "分钟" : h + "小时";
+        }
+        return n + "分钟";
+      }
+      function formatPlanDate(iso) {
+        if (!iso)
+          return "";
+        const s = String(iso).slice(0, 10);
+        const p = s.split("-");
+        if (p.length >= 3)
+          return parseInt(p[1], 10) + "月" + parseInt(p[2], 10) + "日";
+        return s;
+      }
+      function formatPlanExpire(iso) {
+        if (!iso)
+          return "";
+        const d = new Date(iso);
+        if (isNaN(d.getTime()))
+          return iso;
+        const pad = (n) => n < 10 ? "0" + n : "" + n;
+        return d.getMonth() + 1 + "月" + d.getDate() + "日 " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+      }
+      function proposalStatusText(status) {
+        const map = {
+          PENDING: "待确认",
+          CONFIRMED: "已确认",
+          REJECTED: "已拒绝",
+          EXPIRED: "已过期"
+        };
+        return map[status] || status || "";
+      }
+      function appendPlanProposalMessage(res) {
+        const hint = res.planProposal || {};
+        const msg = createPlanProposalShell({
+          id: res.assistantMessageId,
+          content: res.reply || "",
+          proposalId: hint.proposalId,
+          status: hint.status,
+          hint
+        });
+        messages.value.push(msg);
+        return getPlanProposal(msg.proposalId).then((detail) => {
+          applyProposalDetail(msg, detail);
+        }).catch(() => {
+          msg.detail = {
+            goalTitle: hint.goalTitle || "计划草案",
+            goalDescription: hint.summary || "",
+            summary: hint.summary || "",
+            startDate: hint.startDate,
+            endDate: hint.endDate,
+            dailyReminderTime: hint.dailyReminderTime,
+            days: []
+          };
+          uni.showToast({ title: "加载计划详情失败", icon: "none" });
+        }).finally(() => {
+          msg.loading = false;
+        });
+      }
+      function onConfirmProposal(msg) {
+        if (msg.resolved || msg.acting || msg.status !== "PENDING")
+          return;
+        msg.acting = "confirm";
+        confirmPlanProposal(msg.proposalId).then((res) => {
+          return getPlanProposal(msg.proposalId).then((detail) => {
+            applyProposalDetail(msg, detail);
+            if (res.message)
+              msg.resultMessage = res.message;
+            uni.showToast({ title: "计划已确认", icon: "success" });
+            persistSession();
+          });
+        }).catch((e) => {
+          uni.showToast({ title: e && e.message || "确认失败", icon: "none" });
+        }).finally(() => {
+          msg.acting = false;
+        });
+      }
+      function onRejectProposal(msg) {
+        if (msg.resolved || msg.acting || msg.status !== "PENDING")
+          return;
+        uni.showModal({
+          title: "拒绝计划",
+          content: "确定拒绝这份计划草案吗？拒绝后不会创建任务与提醒。",
+          success: (r) => {
+            if (!r.confirm)
+              return;
+            msg.acting = "reject";
+            rejectPlanProposal(msg.proposalId).then(() => {
+              msg.resolved = true;
+              msg.status = "REJECTED";
+              msg.resultMessage = "已拒绝该计划草案";
+              uni.showToast({ title: "已拒绝", icon: "none" });
+              persistSession();
+            }).catch((e) => {
+              uni.showToast({ title: e && e.message || "操作失败", icon: "none" });
+            }).finally(() => {
+              msg.acting = false;
+            });
+          }
+        });
+      }
+      function onChatSuccess(res) {
+        removeAiLoading();
+        sessionId.value = res.sessionId;
+        if (res.planProposal && res.planProposal.proposalId != null) {
+          appendPlanProposalMessage(res).then(() => {
+            persistSession();
+            scroll();
+          });
+        } else {
+          messages.value.push({ role: "ai", type: "text", title: "", content: res.reply, tip: "", show: true });
+          persistSession();
+          scroll();
+        }
+      }
+      function formatSessionTime(iso) {
+        if (!iso)
+          return "";
+        const d = new Date(iso);
+        if (isNaN(d.getTime()))
+          return "";
+        const now = /* @__PURE__ */ new Date();
+        const isToday = d.toDateString() === now.toDateString();
+        const pad = (n) => n < 10 ? "0" + n : "" + n;
+        if (isToday)
+          return pad(d.getHours()) + ":" + pad(d.getMinutes());
+        return d.getMonth() + 1 + "/" + d.getDate();
+      }
+      function formatVoiceLabel(msg) {
+        const t = (msg.content || "").replace(/^\[语音\]\s*/, "").trim();
+        return t || "语音消息";
+      }
+      function voiceMsgKey(msg) {
+        return msg.id != null ? "id-" + msg.id : "url-" + (msg.voiceUrl || "");
+      }
+      function isPlayingVoice(msg) {
+        return playingVoiceKey.value === voiceMsgKey(msg);
+      }
+      function getInnerAudio() {
+        if (!innerAudioContext) {
+          innerAudioContext = uni.createInnerAudioContext();
+          innerAudioContext.onEnded(() => {
+            playingVoiceKey.value = null;
+          });
+          innerAudioContext.onStop(() => {
+            playingVoiceKey.value = null;
+          });
+          innerAudioContext.onError(() => {
+            playingVoiceKey.value = null;
+            uni.showToast({ title: "无法播放语音", icon: "none" });
+          });
+        }
+        return innerAudioContext;
+      }
+      function playVoice(msg) {
+        const url = resolveMediaUrl(msg.voiceUrl);
+        if (!url) {
+          uni.showToast({ title: "语音文件不可用", icon: "none" });
+          return;
+        }
+        const key = voiceMsgKey(msg);
+        const audio = getInnerAudio();
+        if (playingVoiceKey.value === key) {
+          audio.stop();
+          playingVoiceKey.value = null;
+          return;
+        }
+        playingVoiceKey.value = key;
+        audio.src = url;
+        audio.play();
+      }
+      function openHistory() {
+        if (!getAccessToken()) {
+          uni.showToast({ title: "请先登录", icon: "none" });
+          setTimeout(() => {
+            uni.navigateTo({ url: "/pages/login/login" });
+          }, 800);
+          return;
+        }
+        historyVisible.value = true;
+        refreshSessions();
+      }
+      function createNewSession() {
+        if (innerAudioContext)
+          innerAudioContext.stop();
+        playingVoiceKey.value = null;
+        sessionId.value = null;
+        clearCurrentSessionId();
+        messages.value = getWelcomeMessages();
+        historyVisible.value = false;
+        scroll();
+      }
+      function loadSession(sid, silent) {
+        if (String(sid) === String(sessionId.value) && !silent) {
+          historyVisible.value = false;
+          return Promise.resolve();
+        }
+        if (loadingSession.value)
+          return Promise.resolve();
+        loadingSession.value = true;
+        if (!silent)
+          historyVisible.value = false;
+        if (innerAudioContext)
+          innerAudioContext.stop();
+        playingVoiceKey.value = null;
+        sessionId.value = sid;
+        saveCurrentSessionId(sid);
+        return fetchAllChatMessages(sid).then((data) => {
+          let list = mapApiToMessages(data);
+          list = mergeVoiceFromCache(sid, list);
+          list = mergeCachedPlanProposals(sid, list);
+          return enrichPlanProposalsForSession(sid, list).then((enriched) => ({ data, list: enriched }));
+        }).then(({ data, list }) => hydratePlanProposalMessages(list).then(() => ({ data, list }))).then(({ data, list }) => {
+          messages.value = list.map((m) => ({ ...m, show: true }));
+          const title = data.sessionTitle || deriveSessionTitle();
+          setCachedSession(sid, {
+            sessionId: data.sessionId || sid,
+            sessionTitle: title,
+            messages: messages.value
+          });
+          scroll();
+        }).catch(() => {
+          if (!silent)
+            uni.showToast({ title: "加载历史失败", icon: "none" });
+          messages.value = getWelcomeMessages();
+          sessionId.value = null;
+          clearCurrentSessionId();
+        }).finally(() => {
+          loadingSession.value = false;
         });
       }
       function goPlans() {
@@ -808,11 +1667,11 @@ if (uni.restoreGlobal) {
         messages.value.push({ role: "user", content: t, show: true });
         inputText.value = "";
         scroll();
+        pushAiLoading();
         sendChatMessage(t, sessionId.value || void 0).then((res) => {
-          sessionId.value = res.sessionId;
-          messages.value.push({ role: "ai", type: "text", title: "", content: res.reply, tip: "", show: true });
-          scroll();
+          onChatSuccess(res);
         }).catch((e) => {
+          removeAiLoading();
           if (e && e.code === "UNAUTHORIZED") {
             uni.showToast({ title: "请先登录", icon: "none" });
             setTimeout(() => {
@@ -827,6 +1686,7 @@ if (uni.restoreGlobal) {
         });
       }
       let recordStartTime = 0;
+      let lastVoiceBlobUrl = null;
       function ensureRecordPermission() {
         return new Promise((resolve, reject) => {
           const sys = uni.getSystemInfoSync();
@@ -859,11 +1719,11 @@ if (uni.restoreGlobal) {
           return;
         recorderManager = uni.getRecorderManager();
         recorderManager.onStart(() => {
-          formatAppLog("log", "at pages/index/index.vue:340", "recorderManager onStart");
+          formatAppLog("log", "at pages/index/index.vue:1034", "recorderManager onStart");
           isRecording.value = true;
         });
         recorderManager.onStop((res) => {
-          formatAppLog("log", "at pages/index/index.vue:344", "recorderManager onStop:", JSON.stringify(res));
+          formatAppLog("log", "at pages/index/index.vue:1038", "recorderManager onStop:", JSON.stringify(res));
           isRecording.value = false;
           touchRecording = false;
           recordStarting = false;
@@ -882,7 +1742,7 @@ if (uni.restoreGlobal) {
           }
         });
         recorderManager.onError((err) => {
-          formatAppLog("error", "at pages/index/index.vue:362", "recorderManager onError:", JSON.stringify(err));
+          formatAppLog("error", "at pages/index/index.vue:1056", "recorderManager onError:", JSON.stringify(err));
           isRecording.value = false;
           touchRecording = false;
           recordStarting = false;
@@ -918,8 +1778,6 @@ if (uni.restoreGlobal) {
             showCancel: false
           });
         }
-      }
-      function onVoiceTouchMove() {
       }
       function onVoiceTouchEnd() {
         if (!touchRecording && !recordStarting && !isRecording.value)
@@ -1002,7 +1860,16 @@ if (uni.restoreGlobal) {
         }
       }
       function uploadAndTranscribeBlob(blob) {
-        messages.value.push({ role: "user", content: "[语音] 识别中...", show: true });
+        if (lastVoiceBlobUrl)
+          URL.revokeObjectURL(lastVoiceBlobUrl);
+        lastVoiceBlobUrl = URL.createObjectURL(blob);
+        messages.value.push({
+          role: "user",
+          content: "[语音] 识别中...",
+          show: true,
+          voiceUrl: lastVoiceBlobUrl,
+          isVoice: true
+        });
         scroll();
         const form = new FormData();
         form.append("file", blob, "speech.webm");
@@ -1038,10 +1905,21 @@ if (uni.restoreGlobal) {
         xhr.send(form);
       }
       function handleVoiceResult(filePath) {
-        formatAppLog("log", "at pages/index/index.vue:519", "handleVoiceResult filePath:", filePath);
-        messages.value.push({ role: "user", content: "[语音] 识别中...", show: true });
+        formatAppLog("log", "at pages/index/index.vue:1214", "handleVoiceResult filePath:", filePath);
+        messages.value.push({
+          role: "user",
+          content: "[语音] 识别中...",
+          show: true,
+          voiceUrl: filePath,
+          isVoice: true
+        });
         scroll();
         transcribeAudio(filePath).then((res) => {
+          const last = messages.value[messages.value.length - 1];
+          if (last && last.role === "user" && (res.audioUrl || res.voiceUrl || res.url)) {
+            last.voiceUrl = res.audioUrl || res.voiceUrl || res.url;
+            last.isVoice = true;
+          }
           onTranscribeSuccess(res.text || "");
         }).catch((e) => {
           if (e && e.code === "UNAUTHORIZED") {
@@ -1065,14 +1943,17 @@ if (uni.restoreGlobal) {
         const lastUserMsg = messages.value[messages.value.length - 1];
         if (lastUserMsg && lastUserMsg.role === "user") {
           lastUserMsg.content = "[语音] " + text;
+          if (!lastUserMsg.voiceUrl && lastVoiceBlobUrl)
+            lastUserMsg.voiceUrl = lastVoiceBlobUrl;
+          lastUserMsg.isVoice = true;
         }
         scroll();
         sending.value = true;
+        pushAiLoading();
         sendChatMessage(text, sessionId.value || void 0).then((res) => {
-          sessionId.value = res.sessionId;
-          messages.value.push({ role: "ai", type: "text", title: "", content: res.reply, tip: "", show: true });
-          scroll();
+          onChatSuccess(res);
         }).catch((e) => {
+          removeAiLoading();
           if (e && e.code === "UNAUTHORIZED") {
             uni.showToast({ title: "请先登录", icon: "none" });
             setTimeout(() => {
@@ -1092,11 +1973,11 @@ if (uni.restoreGlobal) {
         sending.value = true;
         messages.value.push({ role: "user", content: t, show: true });
         scroll();
+        pushAiLoading();
         sendChatMessage(t, sessionId.value || void 0).then((res) => {
-          sessionId.value = res.sessionId;
-          messages.value.push({ role: "ai", type: "text", title: "", content: res.reply, tip: "", show: true });
-          scroll();
+          onChatSuccess(res);
         }).catch((e) => {
+          removeAiLoading();
           if (e && e.code === "UNAUTHORIZED") {
             uni.showToast({ title: "请先登录", icon: "none" });
             setTimeout(() => {
@@ -1121,10 +2002,14 @@ if (uni.restoreGlobal) {
         addVisible.value = false;
         uni.showToast({ title: "已选择照片", icon: "none" });
       }
-      const __returned__ = { loaded, scrollTop, inputText, inputMode, inputFocus, isRecording, addVisible, recordTimer, sessionId, sending, userAvatar, composing, get recorderManager() {
+      const __returned__ = { loaded, scrollTop, inputText, inputMode, inputFocus, isRecording, addVisible, recordTimer, sessionId, sending, userAvatar, composing, historyVisible, sessionList, loadingSession, loadingSessions, sessionsRefreshing, sessionsPage, sessionsHasNext, playingVoiceKey, get recorderManager() {
         return recorderManager;
       }, set recorderManager(v) {
         recorderManager = v;
+      }, get innerAudioContext() {
+        return innerAudioContext;
+      }, set innerAudioContext(v) {
+        innerAudioContext = v;
       }, get h5MediaRecorder() {
         return h5MediaRecorder;
       }, set h5MediaRecorder(v) {
@@ -1141,24 +2026,58 @@ if (uni.restoreGlobal) {
         return recordStarting;
       }, set recordStarting(v) {
         recordStarting = v;
-      }, MIN_RECORD_MS, addOptions, messages, showTags, scroll, goPlans, goNotifications, goTasks, goLogin, toggleMode, onSend, get recordStartTime() {
+      }, MIN_RECORD_MS, addOptions, WELCOME_MESSAGE, getWelcomeMessages, messages, showTags, openPendingSessionIfAny, scroll, pickVoiceUrl, pickProposalIdFromMessage, looksLikePlanDraftReply, createPlanProposalShell, proposalResultMessage, applyProposalDetail, mapApiMessage, mapApiToMessages, deriveSessionTitle, pushAiLoading, removeAiLoading, persistSession, mapSessionItem, applySessionsPage, onSessionsRefresh, refreshSessions, loadMoreSessions, mergeCachedPlanProposals, enrichPlanProposalsForSession, hydratePlanProposalMessages, mergeVoiceFromCache, formatMinutes, formatPlanDate, formatPlanExpire, proposalStatusText, appendPlanProposalMessage, onConfirmProposal, onRejectProposal, onChatSuccess, formatSessionTime, formatVoiceLabel, voiceMsgKey, isPlayingVoice, getInnerAudio, playVoice, openHistory, createNewSession, loadSession, goPlans, goNotifications, goTasks, goLogin, toggleMode, onSend, get recordStartTime() {
         return recordStartTime;
       }, set recordStartTime(v) {
         recordStartTime = v;
-      }, ensureRecordPermission, initRecorderManager, onVoiceTouchStart, onVoiceTouchMove, onVoiceTouchEnd, startRecord, stopRecord, uploadAndTranscribeBlob, handleVoiceResult, onTranscribeSuccess, onQuick, onFeature, showAddMenu, onAdd, ref: vue.ref, nextTick: vue.nextTick, computed: vue.computed, onMounted: vue.onMounted, get getAccessToken() {
+      }, get lastVoiceBlobUrl() {
+        return lastVoiceBlobUrl;
+      }, set lastVoiceBlobUrl(v) {
+        lastVoiceBlobUrl = v;
+      }, ensureRecordPermission, initRecorderManager, onVoiceTouchStart, onVoiceTouchEnd, startRecord, stopRecord, uploadAndTranscribeBlob, handleVoiceResult, onTranscribeSuccess, onQuick, onFeature, showAddMenu, onAdd, ref: vue.ref, nextTick: vue.nextTick, computed: vue.computed, onMounted: vue.onMounted, get onShow() {
+        return onShow;
+      }, get getAccessToken() {
         return getAccessToken;
       }, get sendChatMessage() {
         return sendChatMessage;
       }, get transcribeAudio() {
         return transcribeAudio;
-      }, get getUnreadCount() {
-        return getUnreadCount;
       }, get getUserInfo() {
         return getUserInfo;
+      }, get getChatSessions() {
+        return getChatSessions;
+      }, get fetchAllChatMessages() {
+        return fetchAllChatMessages;
+      }, get resolveMediaUrl() {
+        return resolveMediaUrl;
       }, get BASE_URL() {
         return BASE_URL;
+      }, get getPlanProposal() {
+        return getPlanProposal;
+      }, get getPlanProposalsBySession() {
+        return getPlanProposalsBySession;
+      }, get confirmPlanProposal() {
+        return confirmPlanProposal;
+      }, get rejectPlanProposal() {
+        return rejectPlanProposal;
       }, get store() {
         return store;
+      }, get refreshUnreadCount() {
+        return refreshUnreadCount;
+      }, get onChatReply() {
+        return onChatReply;
+      }, get isSessionCached() {
+        return isSessionCached;
+      }, get getCachedSession() {
+        return getCachedSession;
+      }, get setCachedSession() {
+        return setCachedSession;
+      }, get saveCurrentSessionId() {
+        return saveCurrentSessionId;
+      }, get getCurrentSessionId() {
+        return getCurrentSessionId;
+      }, get clearCurrentSessionId() {
+        return clearCurrentSessionId;
       } };
       Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
       return __returned__;
@@ -1211,6 +2130,18 @@ if (uni.restoreGlobal) {
             ]),
             vue.createElementVNode("view", {
               class: "plan-entry",
+              onClick: $setup.openHistory
+            }, [
+              vue.createElementVNode("text", { style: { "font-size": "28rpx", "color": "#fff" } }, "💬")
+            ]),
+            vue.createElementVNode("view", {
+              class: "plan-entry",
+              onClick: $setup.createNewSession
+            }, [
+              vue.createElementVNode("text", { style: { "font-size": "28rpx", "color": "#fff" } }, "＋")
+            ]),
+            vue.createElementVNode("view", {
+              class: "plan-entry",
               onClick: $setup.goPlans
             }, [
               vue.createElementVNode("text", { class: "plan-entry-txt" }, "计划 ›")
@@ -1251,7 +2182,74 @@ if (uni.restoreGlobal) {
                     key: 1,
                     class: "card-ai"
                   }, [
-                    msg.type === "text" ? (vue.openBlock(), vue.createElementBlock("view", { key: 0 }, [
+                    msg.type === "loading" ? (vue.openBlock(), vue.createElementBlock("view", {
+                      key: 0,
+                      class: "ai-loading-wrap"
+                    }, [
+                      vue.createElementVNode("view", { class: "wifi-loader" }, [
+                        (vue.openBlock(), vue.createElementBlock("svg", {
+                          class: "circle-outer",
+                          viewBox: "0 0 86 86"
+                        }, [
+                          vue.createElementVNode("circle", {
+                            class: "back",
+                            cx: "43",
+                            cy: "43",
+                            r: "40",
+                            fill: "none"
+                          }),
+                          vue.createElementVNode("circle", {
+                            class: "front",
+                            cx: "43",
+                            cy: "43",
+                            r: "40",
+                            fill: "none"
+                          })
+                        ])),
+                        (vue.openBlock(), vue.createElementBlock("svg", {
+                          class: "circle-middle",
+                          viewBox: "0 0 60 60"
+                        }, [
+                          vue.createElementVNode("circle", {
+                            class: "back",
+                            cx: "30",
+                            cy: "30",
+                            r: "27",
+                            fill: "none"
+                          }),
+                          vue.createElementVNode("circle", {
+                            class: "front",
+                            cx: "30",
+                            cy: "30",
+                            r: "27",
+                            fill: "none"
+                          })
+                        ])),
+                        (vue.openBlock(), vue.createElementBlock("svg", {
+                          class: "circle-inner",
+                          viewBox: "0 0 34 34"
+                        }, [
+                          vue.createElementVNode("circle", {
+                            class: "back",
+                            cx: "17",
+                            cy: "17",
+                            r: "14",
+                            fill: "none"
+                          }),
+                          vue.createElementVNode("circle", {
+                            class: "front",
+                            cx: "17",
+                            cy: "17",
+                            r: "14",
+                            fill: "none"
+                          })
+                        ])),
+                        vue.createElementVNode("view", {
+                          class: "text",
+                          "data-text": "loading"
+                        })
+                      ])
+                    ])) : msg.type === "text" ? (vue.openBlock(), vue.createElementBlock("view", { key: 1 }, [
                       msg.title ? (vue.openBlock(), vue.createElementBlock(
                         "text",
                         {
@@ -1277,7 +2275,7 @@ if (uni.restoreGlobal) {
                         /* TEXT */
                       )) : vue.createCommentVNode("v-if", true)
                     ])) : vue.createCommentVNode("v-if", true),
-                    msg.type === "plan" ? (vue.openBlock(), vue.createElementBlock("view", { key: 1 }, [
+                    msg.type === "plan" ? (vue.openBlock(), vue.createElementBlock("view", { key: 2 }, [
                       vue.createElementVNode(
                         "text",
                         { class: "card-hd" },
@@ -1322,7 +2320,193 @@ if (uni.restoreGlobal) {
                         vue.createElementVNode("text", { class: "link-txt" }, "查看计划 >")
                       ])
                     ])) : vue.createCommentVNode("v-if", true),
-                    msg.type === "recommend" ? (vue.openBlock(), vue.createElementBlock("view", { key: 2 }, [
+                    msg.type === "planProposal" ? (vue.openBlock(), vue.createElementBlock("view", {
+                      key: 3,
+                      class: "proposal-wrap"
+                    }, [
+                      msg.content ? (vue.openBlock(), vue.createBlock(_component_markdown_content, {
+                        key: 0,
+                        class: "ai-bd proposal-intro",
+                        content: msg.content
+                      }, null, 8, ["content"])) : vue.createCommentVNode("v-if", true),
+                      msg.loading ? (vue.openBlock(), vue.createElementBlock("view", {
+                        key: 1,
+                        class: "proposal-loading"
+                      }, [
+                        vue.createElementVNode("text", { class: "proposal-loading-txt" }, "正在加载计划详情...")
+                      ])) : (vue.openBlock(), vue.createElementBlock(
+                        vue.Fragment,
+                        { key: 2 },
+                        [
+                          msg.status ? (vue.openBlock(), vue.createElementBlock(
+                            "view",
+                            {
+                              key: 0,
+                              class: vue.normalizeClass(["proposal-status-badge", "status-" + String(msg.status).toLowerCase()])
+                            },
+                            [
+                              vue.createElementVNode(
+                                "text",
+                                null,
+                                vue.toDisplayString($setup.proposalStatusText(msg.status)),
+                                1
+                                /* TEXT */
+                              )
+                            ],
+                            2
+                            /* CLASS */
+                          )) : vue.createCommentVNode("v-if", true),
+                          msg.detail ? (vue.openBlock(), vue.createElementBlock("view", {
+                            key: 1,
+                            class: "proposal-body"
+                          }, [
+                            vue.createElementVNode(
+                              "text",
+                              { class: "proposal-title" },
+                              vue.toDisplayString(msg.detail.goalTitle),
+                              1
+                              /* TEXT */
+                            ),
+                            msg.detail.goalDescription ? (vue.openBlock(), vue.createElementBlock(
+                              "text",
+                              {
+                                key: 0,
+                                class: "proposal-desc"
+                              },
+                              vue.toDisplayString(msg.detail.goalDescription),
+                              1
+                              /* TEXT */
+                            )) : vue.createCommentVNode("v-if", true),
+                            vue.createElementVNode(
+                              "text",
+                              { class: "proposal-summary" },
+                              vue.toDisplayString(msg.detail.summary),
+                              1
+                              /* TEXT */
+                            ),
+                            vue.createElementVNode("text", { class: "proposal-meta" }, [
+                              vue.createTextVNode(
+                                " 📅 " + vue.toDisplayString($setup.formatPlanDate(msg.detail.startDate || msg.detail.days && msg.detail.days[0] && msg.detail.days[0].scheduledDate)) + " ",
+                                1
+                                /* TEXT */
+                              ),
+                              msg.detail.endDate ? (vue.openBlock(), vue.createElementBlock(
+                                "text",
+                                { key: 0 },
+                                " — " + vue.toDisplayString($setup.formatPlanDate(msg.detail.endDate)),
+                                1
+                                /* TEXT */
+                              )) : vue.createCommentVNode("v-if", true),
+                              vue.createTextVNode(
+                                " · ⏰ 每日 " + vue.toDisplayString(msg.detail.dailyReminderTime || "08:00"),
+                                1
+                                /* TEXT */
+                              )
+                            ]),
+                            (vue.openBlock(true), vue.createElementBlock(
+                              vue.Fragment,
+                              null,
+                              vue.renderList(msg.detail.days || [], (d) => {
+                                return vue.openBlock(), vue.createElementBlock("view", {
+                                  class: "proposal-day",
+                                  key: d.dayIndex
+                                }, [
+                                  vue.createElementVNode("view", { class: "day-hd" }, [
+                                    vue.createElementVNode(
+                                      "text",
+                                      { class: "day-tag" },
+                                      "第" + vue.toDisplayString(d.dayIndex) + "天",
+                                      1
+                                      /* TEXT */
+                                    ),
+                                    vue.createElementVNode(
+                                      "text",
+                                      { class: "day-date" },
+                                      vue.toDisplayString($setup.formatPlanDate(d.scheduledDate)),
+                                      1
+                                      /* TEXT */
+                                    ),
+                                    vue.createElementVNode(
+                                      "text",
+                                      { class: "day-mins" },
+                                      vue.toDisplayString($setup.formatMinutes(d.estimatedMinutes)),
+                                      1
+                                      /* TEXT */
+                                    )
+                                  ]),
+                                  vue.createElementVNode(
+                                    "text",
+                                    { class: "day-title" },
+                                    vue.toDisplayString(d.title),
+                                    1
+                                    /* TEXT */
+                                  ),
+                                  d.description ? (vue.openBlock(), vue.createElementBlock(
+                                    "text",
+                                    {
+                                      key: 0,
+                                      class: "day-desc"
+                                    },
+                                    vue.toDisplayString(d.description),
+                                    1
+                                    /* TEXT */
+                                  )) : vue.createCommentVNode("v-if", true)
+                                ]);
+                              }),
+                              128
+                              /* KEYED_FRAGMENT */
+                            )),
+                            msg.detail.expiresAt ? (vue.openBlock(), vue.createElementBlock(
+                              "text",
+                              {
+                                key: 1,
+                                class: "proposal-expire"
+                              },
+                              " 草案有效期至 " + vue.toDisplayString($setup.formatPlanExpire(msg.detail.expiresAt)),
+                              1
+                              /* TEXT */
+                            )) : vue.createCommentVNode("v-if", true)
+                          ])) : vue.createCommentVNode("v-if", true),
+                          !msg.resolved && msg.status === "PENDING" && msg.detail ? (vue.openBlock(), vue.createElementBlock("view", {
+                            key: 2,
+                            class: "proposal-actions"
+                          }, [
+                            vue.createElementVNode("view", {
+                              class: vue.normalizeClass(["btn-proposal-reject", { disabled: msg.acting }]),
+                              onClick: ($event) => $setup.onRejectProposal(msg)
+                            }, [
+                              vue.createElementVNode("text", null, "拒绝")
+                            ], 10, ["onClick"]),
+                            vue.createElementVNode("view", {
+                              class: vue.normalizeClass(["btn-proposal-confirm", { disabled: msg.acting }]),
+                              onClick: ($event) => $setup.onConfirmProposal(msg)
+                            }, [
+                              vue.createElementVNode(
+                                "text",
+                                null,
+                                vue.toDisplayString(msg.acting === "confirm" ? "确认中..." : "确认计划"),
+                                1
+                                /* TEXT */
+                              )
+                            ], 10, ["onClick"])
+                          ])) : msg.resolved ? (vue.openBlock(), vue.createElementBlock("view", {
+                            key: 3,
+                            class: "proposal-done"
+                          }, [
+                            vue.createElementVNode(
+                              "text",
+                              null,
+                              vue.toDisplayString(msg.resultMessage),
+                              1
+                              /* TEXT */
+                            )
+                          ])) : vue.createCommentVNode("v-if", true)
+                        ],
+                        64
+                        /* STABLE_FRAGMENT */
+                      ))
+                    ])) : vue.createCommentVNode("v-if", true),
+                    msg.type === "recommend" ? (vue.openBlock(), vue.createElementBlock("view", { key: 4 }, [
                       vue.createElementVNode(
                         "text",
                         { class: "card-hd" },
@@ -1351,7 +2535,7 @@ if (uni.restoreGlobal) {
                         /* KEYED_FRAGMENT */
                       ))
                     ])) : vue.createCommentVNode("v-if", true),
-                    msg.type === "stats" ? (vue.openBlock(), vue.createElementBlock("view", { key: 3 }, [
+                    msg.type === "stats" ? (vue.openBlock(), vue.createElementBlock("view", { key: 5 }, [
                       vue.createElementVNode(
                         "text",
                         { class: "card-hd" },
@@ -1397,13 +2581,55 @@ if (uni.restoreGlobal) {
                     key: 2,
                     class: "card-user"
                   }, [
-                    vue.createElementVNode(
+                    msg.isVoice && msg.voiceUrl ? (vue.openBlock(), vue.createElementBlock("view", {
+                      key: 0,
+                      class: "voice-bubble",
+                      onClick: ($event) => $setup.playVoice(msg)
+                    }, [
+                      vue.createElementVNode(
+                        "text",
+                        { class: "voice-play-icon" },
+                        vue.toDisplayString($setup.isPlayingVoice(msg) ? "⏸" : "▶"),
+                        1
+                        /* TEXT */
+                      ),
+                      vue.createElementVNode("view", { class: "voice-wave" }, [
+                        (vue.openBlock(), vue.createElementBlock(
+                          vue.Fragment,
+                          null,
+                          vue.renderList(4, (n) => {
+                            return vue.createElementVNode(
+                              "view",
+                              {
+                                class: vue.normalizeClass(["wave-bar", { active: $setup.isPlayingVoice(msg) }]),
+                                key: n
+                              },
+                              null,
+                              2
+                              /* CLASS */
+                            );
+                          }),
+                          64
+                          /* STABLE_FRAGMENT */
+                        ))
+                      ]),
+                      vue.createElementVNode(
+                        "text",
+                        { class: "voice-text" },
+                        vue.toDisplayString($setup.formatVoiceLabel(msg)),
+                        1
+                        /* TEXT */
+                      )
+                    ], 8, ["onClick"])) : (vue.openBlock(), vue.createElementBlock(
                       "text",
-                      { class: "user-txt" },
+                      {
+                        key: 1,
+                        class: "user-txt"
+                      },
                       vue.toDisplayString(msg.content),
                       1
                       /* TEXT */
-                    )
+                    ))
                   ])) : vue.createCommentVNode("v-if", true),
                   msg.role === "user" ? (vue.openBlock(), vue.createElementBlock("view", {
                     key: 3,
@@ -1488,7 +2714,8 @@ if (uni.restoreGlobal) {
             onTouchstart: vue.withModifiers($setup.onVoiceTouchStart, ["stop"]),
             onTouchend: vue.withModifiers($setup.onVoiceTouchEnd, ["stop"]),
             onTouchcancel: vue.withModifiers($setup.onVoiceTouchEnd, ["stop"]),
-            onTouchmove: vue.withModifiers($setup.onVoiceTouchMove, ["stop", "prevent"])
+            onTouchmove: _cache[8] || (_cache[8] = vue.withModifiers(() => {
+            }, ["stop"]))
           },
           [
             vue.createElementVNode(
@@ -1537,7 +2764,8 @@ if (uni.restoreGlobal) {
               onTouchstart: vue.withModifiers($setup.onVoiceTouchStart, ["stop"]),
               onTouchend: vue.withModifiers($setup.onVoiceTouchEnd, ["stop"]),
               onTouchcancel: vue.withModifiers($setup.onVoiceTouchEnd, ["stop"]),
-              onTouchmove: vue.withModifiers($setup.onVoiceTouchMove, ["stop", "prevent"])
+              onTouchmove: _cache[9] || (_cache[9] = vue.withModifiers(() => {
+              }, ["stop"]))
             },
             [
               vue.createElementVNode("text", { style: { "font-size": "28rpx", "color": "#fff" } }, "🎤")
@@ -1553,14 +2781,94 @@ if (uni.restoreGlobal) {
           ])
         ])
       ]),
-      $setup.addVisible ? (vue.openBlock(), vue.createElementBlock("view", {
+      $setup.historyVisible ? (vue.openBlock(), vue.createElementBlock("view", {
         key: 0,
+        class: "history-mask",
+        onClick: _cache[11] || (_cache[11] = ($event) => $setup.historyVisible = false)
+      }, [
+        vue.createElementVNode("view", {
+          class: "history-panel",
+          onClick: _cache[10] || (_cache[10] = vue.withModifiers(() => {
+          }, ["stop"]))
+        }, [
+          vue.createElementVNode("view", { class: "history-hd" }, [
+            vue.createElementVNode("text", { class: "history-title" }, "对话历史"),
+            vue.createElementVNode("view", {
+              class: "history-new",
+              onClick: $setup.createNewSession
+            }, [
+              vue.createElementVNode("text", { class: "history-new-txt" }, "＋ 新对话")
+            ])
+          ]),
+          vue.createElementVNode("scroll-view", {
+            class: "history-scroll",
+            "scroll-y": "",
+            "show-scrollbar": false,
+            "refresher-enabled": true,
+            "refresher-triggered": $setup.sessionsRefreshing,
+            onRefresherrefresh: $setup.onSessionsRefresh,
+            onScrolltolower: $setup.loadMoreSessions
+          }, [
+            $setup.sessionList.length === 0 && !$setup.loadingSessions ? (vue.openBlock(), vue.createElementBlock("view", {
+              key: 0,
+              class: "history-empty"
+            }, [
+              vue.createElementVNode("text", { class: "history-empty-txt" }, "暂无历史对话")
+            ])) : vue.createCommentVNode("v-if", true),
+            (vue.openBlock(true), vue.createElementBlock(
+              vue.Fragment,
+              null,
+              vue.renderList($setup.sessionList, (s) => {
+                return vue.openBlock(), vue.createElementBlock("view", {
+                  key: s.id,
+                  class: vue.normalizeClass(["history-item", { active: String(s.id) === String($setup.sessionId) }]),
+                  onClick: ($event) => $setup.loadSession(s.id)
+                }, [
+                  vue.createElementVNode(
+                    "text",
+                    { class: "history-item-title" },
+                    vue.toDisplayString(s.title || "新对话"),
+                    1
+                    /* TEXT */
+                  ),
+                  vue.createElementVNode("text", { class: "history-item-meta" }, [
+                    vue.createTextVNode(
+                      vue.toDisplayString($setup.formatSessionTime(s.updatedAt)) + " ",
+                      1
+                      /* TEXT */
+                    ),
+                    $setup.isSessionCached(s.id) ? (vue.openBlock(), vue.createElementBlock("text", {
+                      key: 0,
+                      class: "history-local"
+                    }, " · 本地")) : vue.createCommentVNode("v-if", true)
+                  ])
+                ], 10, ["onClick"]);
+              }),
+              128
+              /* KEYED_FRAGMENT */
+            )),
+            $setup.loadingSessions ? (vue.openBlock(), vue.createElementBlock("view", {
+              key: 1,
+              class: "history-loading"
+            }, [
+              vue.createElementVNode("text", { class: "history-loading-txt" }, "加载中...")
+            ])) : !$setup.sessionsHasNext && $setup.sessionList.length > 0 ? (vue.openBlock(), vue.createElementBlock("view", {
+              key: 2,
+              class: "history-loading"
+            }, [
+              vue.createElementVNode("text", { class: "history-loading-txt" }, "没有更多了")
+            ])) : vue.createCommentVNode("v-if", true)
+          ], 40, ["refresher-triggered"])
+        ])
+      ])) : vue.createCommentVNode("v-if", true),
+      $setup.addVisible ? (vue.openBlock(), vue.createElementBlock("view", {
+        key: 1,
         class: "add-mask",
-        onClick: _cache[9] || (_cache[9] = ($event) => $setup.addVisible = false)
+        onClick: _cache[13] || (_cache[13] = ($event) => $setup.addVisible = false)
       }, [
         vue.createElementVNode("view", {
           class: "add-panel",
-          onClick: _cache[8] || (_cache[8] = vue.withModifiers(() => {
+          onClick: _cache[12] || (_cache[12] = vue.withModifiers(() => {
           }, ["stop"]))
         }, [
           (vue.openBlock(), vue.createElementBlock(
@@ -1987,7 +3295,9 @@ if (uni.restoreGlobal) {
         }
         logging.value = true;
         try {
-          const res = await login(loginForm.value.email, loginForm.value.password);
+          await login(loginForm.value.email, loginForm.value.password);
+          const { onAuthSuccess: onAuthSuccess2 } = await __vitePreload(() => Promise.resolve().then(() => afterAuth), false ? "__VITE_PRELOAD__" : void 0);
+          onAuthSuccess2();
           uni.showToast({ title: "登录成功", icon: "success" });
           setTimeout(() => uni.reLaunch({ url: "/pages/index/index" }), 1e3);
         } catch (e) {
@@ -2373,6 +3683,8 @@ if (uni.restoreGlobal) {
             nickname: form.value.nickname,
             verificationCode: form.value.code
           });
+          const { onAuthSuccess: onAuthSuccess2 } = await __vitePreload(() => Promise.resolve().then(() => afterAuth), false ? "__VITE_PRELOAD__" : void 0);
+          onAuthSuccess2();
           uni.showToast({ title: "注册成功", icon: "success" });
           setTimeout(() => {
             uni.reLaunch({ url: "/pages/index/index" });
@@ -3485,29 +4797,44 @@ if (uni.restoreGlobal) {
       const loaded = vue.ref(false);
       const loading = vue.ref(false);
       const refreshing = vue.ref(false);
-      const activeTab = vue.ref("");
+      const activeTab = vue.ref("OPEN");
       const tasks = vue.ref([]);
       const tabs = [
-        { label: "全部", value: "" },
         { label: "进行中", value: "OPEN" },
         { label: "已完成", value: "DONE" },
-        { label: "已取消", value: "CANCELLED" }
+        { label: "已取消", value: "CANCELLED" },
+        { label: "全部", value: "" }
       ];
+      const activeTabLabel = vue.computed(() => {
+        const t = tabs.find((x) => x.value === activeTab.value);
+        return t ? t.label : "";
+      });
+      onLoad((query) => {
+        if (query && query.status) {
+          const allowed = ["OPEN", "DONE", "CANCELLED", ""];
+          if (allowed.includes(query.status))
+            activeTab.value = query.status;
+        }
+      });
       vue.onMounted(() => {
         vue.nextTick(() => {
           setTimeout(() => {
             loaded.value = true;
           }, 50);
         });
-      });
-      vue.onMounted(() => {
         loadTasks();
       });
+      function isCompleted(task) {
+        return task && task.status === "DONE";
+      }
+      function isActive(task) {
+        return task && task.status === "OPEN";
+      }
       async function loadTasks() {
         loading.value = true;
         try {
           const res = await getMyTasks(activeTab.value || void 0);
-          tasks.value = res.tasks || [];
+          tasks.value = res.tasks || res.items || [];
         } catch (e) {
           tasks.value = [];
         } finally {
@@ -3522,7 +4849,6 @@ if (uni.restoreGlobal) {
         refreshing.value = true;
         loadTasks().finally(() => {
           refreshing.value = false;
-          uni.stopPullDownRefresh();
         });
       }
       function goBack() {
@@ -3534,7 +4860,8 @@ if (uni.restoreGlobal) {
         }
       }
       function onTaskTap(task) {
-        uni.showToast({ title: task.title, icon: "none" });
+        const hint = isCompleted(task) ? "已完成" : task.status === "CANCELLED" ? "已取消" : "进行中，可在对话中让 AI 更新任务状态";
+        uni.showToast({ title: task.title + " · " + hint, icon: "none", duration: 2500 });
       }
       function statusClass(status) {
         return { OPEN: "open", DONE: "done", CANCELLED: "cancelled" }[status] || "open";
@@ -3542,7 +4869,9 @@ if (uni.restoreGlobal) {
       function statusText(status) {
         return { OPEN: "进行中", DONE: "已完成", CANCELLED: "已取消" }[status] || "进行中";
       }
-      const __returned__ = { loaded, loading, refreshing, activeTab, tasks, tabs, loadTasks, switchTab, onRefresh, goBack, onTaskTap, statusClass, statusText, ref: vue.ref, onMounted: vue.onMounted, nextTick: vue.nextTick, get getMyTasks() {
+      const __returned__ = { loaded, loading, refreshing, activeTab, tasks, tabs, activeTabLabel, isCompleted, isActive, loadTasks, switchTab, onRefresh, goBack, onTaskTap, statusClass, statusText, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted, nextTick: vue.nextTick, get onLoad() {
+        return onLoad;
+      }, get getMyTasks() {
         return getMyTasks;
       } };
       Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
@@ -3571,7 +4900,7 @@ if (uni.restoreGlobal) {
         },
         [
           vue.createElementVNode("text", { class: "title" }, "我的任务"),
-          vue.createElementVNode("text", { class: "subtitle" }, "管理你的待办事项")
+          vue.createElementVNode("text", { class: "subtitle" }, "列表只读；完成/取消请通过 AI 对话操作")
         ],
         2
         /* CLASS */
@@ -3621,15 +4950,21 @@ if (uni.restoreGlobal) {
           class: "empty-state"
         }, [
           vue.createElementVNode("text", { style: { "font-size": "80rpx", "opacity": "0.3" } }, "📋"),
-          vue.createElementVNode("text", { class: "empty-text" }, "暂无任务"),
-          vue.createElementVNode("text", { class: "empty-sub" }, "与 AI 对话，创建你的第一个任务")
+          vue.createElementVNode(
+            "text",
+            { class: "empty-text" },
+            "暂无" + vue.toDisplayString($setup.activeTabLabel) + "任务",
+            1
+            /* TEXT */
+          ),
+          vue.createElementVNode("text", { class: "empty-sub" }, "与 AI 对话创建或更新任务")
         ])) : vue.createCommentVNode("v-if", true),
         (vue.openBlock(true), vue.createElementBlock(
           vue.Fragment,
           null,
           vue.renderList($setup.tasks, (task, i) => {
             return vue.openBlock(), vue.createElementBlock("view", {
-              class: vue.normalizeClass(["task-card", { show: $setup.loaded }]),
+              class: vue.normalizeClass(["task-card", [{ show: $setup.loaded }, $setup.statusClass(task.status), { completed: $setup.isCompleted(task) }]]),
               key: task.id,
               style: vue.normalizeStyle({ transitionDelay: i * 0.08 + "s" }),
               onClick: ($event) => $setup.onTaskTap(task)
@@ -3697,6 +5032,80 @@ if (uni.restoreGlobal) {
     ]);
   }
   const PagesTasksTasks = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["render", _sfc_render$1], ["__scopeId", "data-v-027feebf"], ["__file", "E:/HTML/ai_grow/pages/tasks/tasks.vue"]]);
+  function toStr(v) {
+    if (v == null || v === "")
+      return null;
+    return String(v);
+  }
+  function normalizePushPayload(raw) {
+    if (!raw)
+      return null;
+    let data = raw;
+    if (typeof raw === "string") {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+    if (data.payload)
+      data = data.payload;
+    if (typeof data === "string") {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        return null;
+      }
+    }
+    const type = data.type || data.msgType;
+    if (!type)
+      return null;
+    return {
+      type,
+      notificationId: data.notificationId != null ? Number(data.notificationId) : null,
+      sessionId: data.sessionId != null ? Number(data.sessionId) : null,
+      messageId: data.messageId != null ? Number(data.messageId) : null,
+      taskId: data.taskId != null && data.taskId !== "" ? Number(data.taskId) : null,
+      title: data.title || "",
+      body: data.body || "",
+      unreadCount: data.unreadCount != null ? Number(data.unreadCount) : void 0
+    };
+  }
+  function stashPendingSession(sessionId) {
+    if (sessionId == null)
+      return;
+    uni.setStorageSync("pendingOpenSessionId", toStr(sessionId));
+  }
+  function navigateFromPushPayload(raw) {
+    const data = normalizePushPayload(raw);
+    if (!data)
+      return;
+    if (data.unreadCount !== void 0 && !isNaN(data.unreadCount)) {
+      store.unreadCount = data.unreadCount;
+    }
+    if (data.notificationId && getAccessToken()) {
+      markNotificationRead(data.notificationId).then(() => refreshUnreadCount()).catch(() => {
+      });
+    }
+    switch (data.type) {
+      case "CHAT_REPLY":
+      case "WEEKLY_COMPANION_DIGEST":
+      case "TASK_DUE_REMINDER":
+        if (data.sessionId != null) {
+          stashPendingSession(data.sessionId);
+          uni.reLaunch({ url: "/pages/index/index" });
+          return;
+        }
+        if (data.taskId != null) {
+          uni.navigateTo({ url: "/pages/tasks/tasks?status=OPEN" });
+          return;
+        }
+        if (data.type !== "CHAT_REPLY") {
+          uni.navigateTo({ url: "/pages/notifications/notifications" });
+        }
+        break;
+    }
+  }
   const _sfc_main$1 = {
     __name: "notifications",
     setup(__props, { expose: __expose }) {
@@ -3704,21 +5113,33 @@ if (uni.restoreGlobal) {
       const loaded = vue.ref(false);
       const loading = vue.ref(false);
       const refreshing = vue.ref(false);
+      const listMode = vue.ref("unread");
       const notifications = vue.ref([]);
+      const hasUnread = vue.computed(() => notifications.value.some((n) => !n.readAt));
+      let offNotifyChange = null;
       vue.onMounted(() => {
         vue.nextTick(() => {
           setTimeout(() => {
             loaded.value = true;
           }, 50);
         });
-      });
-      vue.onMounted(() => {
         loadNotifications();
+        offNotifyChange = onNotificationsChanged(() => loadNotifications());
+      });
+      onShow(() => {
+        refreshUnreadCount();
+        loadNotifications();
+      });
+      vue.onUnmounted(() => {
+        if (offNotifyChange)
+          offNotifyChange();
+        offNotifyChange = null;
       });
       async function loadNotifications() {
         loading.value = true;
         try {
-          const res = await getNotifications();
+          const unreadOnly = listMode.value === "unread";
+          const res = await getNotifications(unreadOnly);
           notifications.value = res.items || [];
         } catch (e) {
           notifications.value = [];
@@ -3726,24 +5147,30 @@ if (uni.restoreGlobal) {
           loading.value = false;
         }
       }
+      function switchMode(mode) {
+        if (listMode.value === mode)
+          return;
+        listMode.value = mode;
+        loadNotifications();
+      }
       function onRefresh() {
         refreshing.value = true;
-        loadNotifications().finally(() => {
+        Promise.all([loadNotifications(), refreshUnreadCount()]).finally(() => {
           refreshing.value = false;
-          uni.stopPullDownRefresh();
         });
       }
       async function onReadAll() {
         try {
           await markAllNotificationsRead();
-          notifications.value.forEach((n) => {
-            if (!n.readAt)
-              n.readAt = (/* @__PURE__ */ new Date()).toISOString();
-          });
-          store.unreadCount = 0;
+          await refreshUnreadCount();
+          if (listMode.value === "unread") {
+            notifications.value = [];
+          } else {
+            await loadNotifications();
+          }
           uni.showToast({ title: "已全部标记已读", icon: "none" });
         } catch (e) {
-          uni.showToast({ title: "操作失败", icon: "none" });
+          uni.showToast({ title: e && e.message || "操作失败", icon: "none" });
         }
       }
       async function onTapNotify(item) {
@@ -3751,13 +5178,22 @@ if (uni.restoreGlobal) {
           try {
             await markNotificationRead(item.id);
             item.readAt = (/* @__PURE__ */ new Date()).toISOString();
-            if (store.unreadCount > 0)
-              store.unreadCount--;
+            await refreshUnreadCount();
+            if (listMode.value === "unread") {
+              notifications.value = notifications.value.filter((n) => n.id !== item.id);
+            }
           } catch (e) {
+            uni.showToast({ title: "标记已读失败", icon: "none" });
+            return;
           }
         }
+        if (item.sessionId) {
+          stashPendingSession(item.sessionId);
+          uni.reLaunch({ url: "/pages/index/index" });
+          return;
+        }
         if (item.taskId) {
-          uni.navigateTo({ url: "/pages/tasks/tasks" });
+          uni.navigateTo({ url: "/pages/tasks/tasks?status=OPEN" });
         }
       }
       function goBack() {
@@ -3769,7 +5205,11 @@ if (uni.restoreGlobal) {
         }
       }
       function iconClass(type) {
-        return type === "TASK_DUE_REMINDER" ? "icon-task" : "icon-info";
+        if (type === "TASK_DUE_REMINDER")
+          return "icon-task";
+        if (type === "WEEKLY_COMPANION_DIGEST")
+          return "icon-weekly";
+        return "icon-info";
       }
       function formatTime(dateStr) {
         if (!dateStr)
@@ -3787,7 +5227,13 @@ if (uni.restoreGlobal) {
         const day = d.getDate();
         return month + "月" + day + "日";
       }
-      const __returned__ = { loaded, loading, refreshing, notifications, loadNotifications, onRefresh, onReadAll, onTapNotify, goBack, iconClass, formatTime, ref: vue.ref, onMounted: vue.onMounted, nextTick: vue.nextTick, get getNotifications() {
+      const __returned__ = { loaded, loading, refreshing, listMode, notifications, hasUnread, get offNotifyChange() {
+        return offNotifyChange;
+      }, set offNotifyChange(v) {
+        offNotifyChange = v;
+      }, loadNotifications, switchMode, onRefresh, onReadAll, onTapNotify, goBack, iconClass, formatTime, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted, onUnmounted: vue.onUnmounted, nextTick: vue.nextTick, get onShow() {
+        return onShow;
+      }, get getNotifications() {
         return getNotifications;
       }, get markNotificationRead() {
         return markNotificationRead;
@@ -3795,6 +5241,12 @@ if (uni.restoreGlobal) {
         return markAllNotificationsRead;
       }, get store() {
         return store;
+      }, get refreshUnreadCount() {
+        return refreshUnreadCount;
+      }, get onNotificationsChanged() {
+        return onNotificationsChanged;
+      }, get stashPendingSession() {
+        return stashPendingSession;
       } };
       Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
       return __returned__;
@@ -3824,9 +5276,15 @@ if (uni.restoreGlobal) {
           vue.createElementVNode("view", { class: "header-row" }, [
             vue.createElementVNode("view", { class: "header-texts" }, [
               vue.createElementVNode("text", { class: "title" }, "通知中心"),
-              vue.createElementVNode("text", { class: "subtitle" }, "查看所有消息提醒")
+              vue.createElementVNode(
+                "text",
+                { class: "subtitle" },
+                vue.toDisplayString($setup.listMode === "unread" ? "未读消息" : "全部通知（含已读）"),
+                1
+                /* TEXT */
+              )
             ]),
-            $setup.notifications.length > 0 ? (vue.openBlock(), vue.createElementBlock("view", {
+            $setup.listMode === "unread" && $setup.hasUnread ? (vue.openBlock(), vue.createElementBlock("view", {
               key: 0,
               class: "read-all-btn",
               onClick: $setup.onReadAll
@@ -3835,6 +5293,40 @@ if (uni.restoreGlobal) {
               vue.createElementVNode("text", null, "全部已读")
             ])) : vue.createCommentVNode("v-if", true)
           ])
+        ],
+        2
+        /* CLASS */
+      ),
+      vue.createElementVNode(
+        "view",
+        {
+          class: vue.normalizeClass(["tab-bar", { show: $setup.loaded }])
+        },
+        [
+          vue.createElementVNode(
+            "view",
+            {
+              class: vue.normalizeClass(["tab-pill", { active: $setup.listMode === "unread" }]),
+              onClick: _cache[0] || (_cache[0] = ($event) => $setup.switchMode("unread"))
+            },
+            [
+              vue.createElementVNode("text", null, "未读")
+            ],
+            2
+            /* CLASS */
+          ),
+          vue.createElementVNode(
+            "view",
+            {
+              class: vue.normalizeClass(["tab-pill", { active: $setup.listMode === "history" }]),
+              onClick: _cache[1] || (_cache[1] = ($event) => $setup.switchMode("history"))
+            },
+            [
+              vue.createElementVNode("text", null, "历史")
+            ],
+            2
+            /* CLASS */
+          )
         ],
         2
         /* CLASS */
@@ -3853,15 +5345,27 @@ if (uni.restoreGlobal) {
           class: "empty-state"
         }, [
           vue.createElementVNode("text", { style: { "font-size": "80rpx", "opacity": "0.3" } }, "📋"),
-          vue.createElementVNode("text", { class: "empty-text" }, "暂无通知"),
-          vue.createElementVNode("text", { class: "empty-sub" }, "有新消息时会在这里提醒你")
+          vue.createElementVNode(
+            "text",
+            { class: "empty-text" },
+            vue.toDisplayString($setup.listMode === "unread" ? "暂无未读通知" : "暂无通知"),
+            1
+            /* TEXT */
+          ),
+          vue.createElementVNode(
+            "text",
+            { class: "empty-sub" },
+            vue.toDisplayString($setup.listMode === "unread" ? "一键已读后这里会为空" : "已读通知也会显示在历史里"),
+            1
+            /* TEXT */
+          )
         ])) : vue.createCommentVNode("v-if", true),
         (vue.openBlock(true), vue.createElementBlock(
           vue.Fragment,
           null,
           vue.renderList($setup.notifications, (item, i) => {
             return vue.openBlock(), vue.createElementBlock("view", {
-              class: vue.normalizeClass(["notify-card", [{ unread: !item.readAt }, { show: $setup.loaded }]]),
+              class: vue.normalizeClass(["notify-card", [{ unread: !item.readAt }, { read: !!item.readAt }, { show: $setup.loaded }]]),
               key: item.id,
               style: vue.normalizeStyle({ transitionDelay: i * 0.06 + "s" }),
               onClick: ($event) => $setup.onTapNotify(item)
@@ -3879,8 +5383,11 @@ if (uni.restoreGlobal) {
                   item.type === "TASK_DUE_REMINDER" ? (vue.openBlock(), vue.createElementBlock("text", {
                     key: 0,
                     style: { "font-size": "32rpx" }
-                  }, "🔔")) : (vue.openBlock(), vue.createElementBlock("text", {
+                  }, "🔔")) : item.type === "WEEKLY_COMPANION_DIGEST" ? (vue.openBlock(), vue.createElementBlock("text", {
                     key: 1,
+                    style: { "font-size": "32rpx" }
+                  }, "📅")) : (vue.openBlock(), vue.createElementBlock("text", {
+                    key: 2,
                     style: { "font-size": "32rpx" }
                   }, "ℹ️"))
                 ],
@@ -3927,27 +5434,38 @@ if (uni.restoreGlobal) {
   __definePage("pages/profile/profile", PagesProfileProfile);
   __definePage("pages/tasks/tasks", PagesTasksTasks);
   __definePage("pages/notifications/notifications", PagesNotificationsNotifications);
+  const BACKOFF_MS = [1e3, 2e3, 5e3, 1e4, 3e4];
   let socketTask = null;
   let reconnectTimer = null;
   let listeners = [];
   let isConnected = false;
+  let backoffIndex = 0;
   function getWsUrl() {
     const token = getAccessToken();
     if (!token)
       return null;
-    const wsBase = BASE_URL.replace(/^http/, "ws");
+    const wsBase = BASE_URL.replace(/^https?/, "ws");
     return wsBase + "/ws/v1/chat?token=" + encodeURIComponent(token);
   }
-  function connect() {
-    if (isConnected)
+  function connect(force = false) {
+    if (isConnected && !force)
       return;
     const url = getWsUrl();
     if (!url)
       return;
+    if (socketTask) {
+      try {
+        socketTask.close({});
+      } catch (e) {
+      }
+      socketTask = null;
+      isConnected = false;
+    }
     socketTask = uni.connectSocket({ url, complete: () => {
     } });
     socketTask.onOpen(() => {
       isConnected = true;
+      backoffIndex = 0;
     });
     socketTask.onMessage((res) => {
       try {
@@ -3967,29 +5485,173 @@ if (uni.restoreGlobal) {
   }
   function scheduleReconnect() {
     clearTimeout(reconnectTimer);
-    reconnectTimer = setTimeout(() => {
-      const token = getAccessToken();
-      if (token)
-        connect();
-    }, 3e3);
+    if (!getAccessToken())
+      return;
+    const delay = BACKOFF_MS[Math.min(backoffIndex, BACKOFF_MS.length - 1)];
+    backoffIndex = Math.min(backoffIndex + 1, BACKOFF_MS.length - 1);
+    reconnectTimer = setTimeout(() => connect(true), delay);
+  }
+  function disconnect() {
+    clearTimeout(reconnectTimer);
+    backoffIndex = 0;
+    if (socketTask) {
+      try {
+        socketTask.close({});
+      } catch (e) {
+      }
+      socketTask = null;
+    }
+    isConnected = false;
+  }
+  function reconnect() {
+    disconnect();
+    connect(true);
   }
   function onMessage(fn) {
     listeners.push(fn);
   }
+  function offMessage(fn) {
+    listeners = listeners.filter((l) => l !== fn);
+  }
+  const websocket = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    connect,
+    disconnect,
+    offMessage,
+    onMessage,
+    reconnect
+  }, Symbol.toStringTag, { value: "Module" }));
+  let listenersBound = false;
+  function getPushPlatform() {
+    const sys = uni.getSystemInfoSync();
+    return sys.platform === "ios" ? "IOS" : "ANDROID";
+  }
+  function requestNotificationPermission() {
+    return new Promise((resolve) => {
+      if (typeof plus === "undefined") {
+        resolve(false);
+        return;
+      }
+      if (plus.os.name === "Android" && plus.android) {
+        try {
+          const Build = plus.android.importClass("android.os.Build");
+          if (Build.VERSION.SDK_INT >= 33) {
+            plus.android.requestPermissions(
+              ["android.permission.POST_NOTIFICATIONS"],
+              (e) => resolve(!!(e.granted && e.granted.length)),
+              () => resolve(false)
+            );
+            return;
+          }
+        } catch (e) {
+        }
+        resolve(true);
+        return;
+      }
+      resolve(true);
+    });
+  }
+  function registerPushIfAllowed() {
+    if (!getAccessToken())
+      return Promise.resolve();
+    return requestNotificationPermission().then(() => {
+      return new Promise((resolve) => {
+        uni.getPushClientId({
+          success: async (res) => {
+            const token = res && res.cid;
+            if (!token) {
+              resolve();
+              return;
+            }
+            try {
+              await registerPushToken({
+                platform: getPushPlatform(),
+                token,
+                deviceId: getOrCreateDeviceId()
+              });
+            } catch (e) {
+              formatAppLog("warn", "at utils/push.js:62", "[push] register failed", e);
+            }
+            resolve();
+          },
+          fail: () => resolve()
+        });
+      });
+    });
+  }
+  function storePendingPayload(raw) {
+    const data = normalizePushPayload(raw);
+    if (data)
+      uni.setStorageSync("pendingPushPayload", data);
+  }
+  function consumePendingPushNavigation() {
+    const raw = uni.getStorageSync("pendingPushPayload");
+    if (!raw)
+      return;
+    uni.removeStorageSync("pendingPushPayload");
+    if (!getAccessToken()) {
+      uni.setStorageSync("pendingPushPayload", raw);
+      return;
+    }
+    navigateFromPushPayload(raw);
+  }
+  function setupPushListeners() {
+    if (listenersBound)
+      return;
+    listenersBound = true;
+    try {
+      uni.onPushMessage((res) => {
+        const payload = res && res.data || res;
+        storePendingPayload(payload);
+      });
+    } catch (e) {
+    }
+    try {
+      if (typeof plus !== "undefined" && plus.push) {
+        plus.push.addEventListener("click", (msg) => {
+          const payload = msg && msg.payload || msg;
+          navigateFromPushPayload(payload);
+        }, false);
+        plus.push.addEventListener("receive", (msg) => {
+          const payload = msg && msg.payload || msg;
+          storePendingPayload(payload);
+        }, false);
+      }
+    } catch (e) {
+    }
+  }
+  let realtimeBound = false;
+  function bindRealtimeHandler() {
+    if (realtimeBound)
+      return;
+    realtimeBound = true;
+    onMessage(handleRealtimeMessage);
+  }
+  function onAuthSuccess() {
+    bindRealtimeHandler();
+    refreshUnreadCount();
+    connect();
+    registerPushIfAllowed();
+  }
+  const afterAuth = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+    __proto__: null,
+    bindRealtimeHandler,
+    onAuthSuccess
+  }, Symbol.toStringTag, { value: "Module" }));
   const _sfc_main = {
     onLaunch: function() {
+      setupPushListeners();
+      bindRealtimeHandler();
       if (getAccessToken()) {
-        connect();
-        onMessage((data) => {
-          if (data.unreadCount !== void 0) {
-            store.unreadCount = data.unreadCount;
-          }
-        });
+        onAuthSuccess();
+        consumePendingPushNavigation();
       }
     },
     onShow: function() {
       if (getAccessToken()) {
+        refreshUnreadCount();
         connect();
+        consumePendingPushNavigation();
       }
     }
   };

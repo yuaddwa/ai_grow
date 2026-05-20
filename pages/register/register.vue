@@ -157,6 +157,8 @@ async function onRegister() {
       nickname: form.value.nickname,
       verificationCode: form.value.code
     })
+    const { onAuthSuccess } = await import('../../utils/afterAuth.js')
+    onAuthSuccess()
     uni.showToast({ title: '注册成功', icon: 'success' })
     setTimeout(() => {
       uni.reLaunch({ url: '/pages/index/index' })

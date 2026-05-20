@@ -1,22 +1,24 @@
 <script>
 import { getAccessToken } from './utils/api.js'
-import { connect, onMessage } from './utils/websocket.js'
-import { store } from './utils/store.js'
+import { connect } from './utils/websocket.js'
+import { refreshUnreadCount } from './utils/store.js'
+import { setupPushListeners, consumePendingPushNavigation } from './utils/push.js'
+import { onAuthSuccess, bindRealtimeHandler } from './utils/afterAuth.js'
 
 export default {
 	onLaunch: function() {
+		setupPushListeners()
+		bindRealtimeHandler()
 		if (getAccessToken()) {
-			connect()
-			onMessage((data) => {
-				if (data.unreadCount !== undefined) {
-					store.unreadCount = data.unreadCount
-				}
-			})
+			onAuthSuccess()
+			consumePendingPushNavigation()
 		}
 	},
 	onShow: function() {
 		if (getAccessToken()) {
+			refreshUnreadCount()
 			connect()
+			consumePendingPushNavigation()
 		}
 	}
 }

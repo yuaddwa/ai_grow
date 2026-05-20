@@ -7,8 +7,6 @@
   position: relative;
   overflow: hidden;
 }
-
-/* 动态气泡 */
 .bg-bubbles[data-v-e30a2353] { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; overflow: hidden;
 }
 .bubble[data-v-e30a2353] { position: absolute; border-radius: 50%; opacity: 0.08;
@@ -41,19 +39,15 @@
 50% { transform: translateY(-0.625rem) translateX(-0.46875rem);
 }
 }
-
-/* 返回按钮 */
 .back-btn[data-v-e30a2353] {
   position: absolute; top: 3.125rem; left: 1rem; z-index: 10;
   width: 2rem; height: 2rem; border-radius: 50%;
   background: rgba(255,255,255,0.7);
   display: flex; align-items: center; justify-content: center;
 }
-
-/* 头部 */
 .header[data-v-e30a2353] {
   position: relative; z-index: 1;
-  padding: 3.75rem 1.5rem 0.625rem 3.5rem;
+  padding: 3.75rem 1.5rem 0.375rem 3.5rem;
   opacity: 0; transform: translateY(0.9375rem);
   transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
@@ -69,51 +63,57 @@
   display: flex; align-items: center; gap: 0.25rem;
   padding: 0.375rem 0.75rem; border-radius: 0.75rem;
   background: rgba(79,172,254,0.08); margin-top: 0.375rem;
-  transition: all 0.3s;
 }
 .read-all-btn[data-v-e30a2353]:active { transform: scale(0.95);
 }
 .read-all-btn uni-text[data-v-e30a2353] { font-size: 0.6875rem; color: #4facfe;
 }
-
-/* 通知列表 */
-.notify-scroll[data-v-e30a2353] {
-  position: relative;
-  z-index: 1;
-  flex: 1;
-  height: 0;
-  min-height: 0;
-  width: 100%;
-  padding: 0.3125rem 1rem;
-  box-sizing: border-box;
+.tab-bar[data-v-e30a2353] {
+  position: relative; z-index: 1;
+  display: flex; gap: 0.5rem; padding: 0.375rem 1.5rem 0.5rem;
+  opacity: 0; transition: opacity 0.6s ease-out 0.1s;
 }
-
-/* 空状态 */
+.tab-bar.show[data-v-e30a2353] { opacity: 1;
+}
+.tab-pill[data-v-e30a2353] {
+  padding: 0.375rem 0.875rem; border-radius: 0.75rem;
+  background: rgba(255,255,255,0.7); border: 0.03125rem solid rgba(255,165,0,0.15);
+  font-size: 0.75rem; color: #888;
+}
+.tab-pill.active[data-v-e30a2353] {
+  background: linear-gradient(135deg, #ffa500, #ffb74d);
+  color: #fff; border-color: transparent;
+}
+.notify-scroll[data-v-e30a2353] {
+  position: relative; z-index: 1;
+  flex: 1; height: 0; min-height: 0; width: 100%;
+  padding: 0.3125rem 1rem; box-sizing: border-box;
+}
 .empty-state[data-v-e30a2353] {
   display: flex; flex-direction: column; align-items: center;
   padding-top: 5rem; gap: 0.5rem;
 }
 .empty-text[data-v-e30a2353] { font-size: 0.9375rem; color: #aaa; font-weight: 600;
 }
-.empty-sub[data-v-e30a2353] { font-size: 0.75rem; color: #ccc;
+.empty-sub[data-v-e30a2353] { font-size: 0.75rem; color: #ccc; text-align: center; padding: 0 1.25rem;
 }
-
-/* 通知卡片 */
 .notify-card[data-v-e30a2353] {
   display: flex; gap: 0.5rem; padding: 0.75rem; position: relative;
   background: rgba(255,255,255,0.92);
   border-radius: 0.625rem; margin-bottom: 0.4375rem;
   box-shadow: 0 0.0625rem 0.5rem rgba(255,165,0,0.05);
   border: 0.03125rem solid rgba(255,255,255,0.6);
-  opacity: 0;
-  transition: opacity 0.35s ease-out;
+  opacity: 0; transition: opacity 0.35s ease-out;
 }
 .notify-card.show[data-v-e30a2353] { opacity: 1;
 }
 .notify-card[data-v-e30a2353]:active { opacity: 0.85;
 }
-.notify-card.unread[data-v-e30a2353] {
-  border-left: 0.1875rem solid #ffa500;
+.notify-card.unread[data-v-e30a2353] { border-left: 0.1875rem solid #ffa500;
+}
+.notify-card.read[data-v-e30a2353] { opacity: 0.85;
+}
+.notify-card.read .notify-title[data-v-e30a2353] { color: #888; font-weight: 500;
 }
 .notify-dot[data-v-e30a2353] {
   position: absolute; top: 0.625rem; right: 0.625rem;
@@ -127,6 +127,8 @@
 }
 .icon-task[data-v-e30a2353] { background: rgba(255,165,0,0.1); color: #ffa500;
 }
+.icon-weekly[data-v-e30a2353] { background: rgba(123,109,240,0.1); color: #7b6df0;
+}
 .icon-info[data-v-e30a2353] { background: rgba(79,172,254,0.1); color: #4facfe;
 }
 .notify-body[data-v-e30a2353] { flex: 1; min-width: 0;
@@ -137,7 +139,7 @@
 }
 .notify-text[data-v-e30a2353] {
   display: block; font-size: 0.75rem; color: #888; margin-top: 0.1875rem;
-  line-height: 1.6; overflow: hidden; text-overflow: ellipsis;
+  line-height: 1.6; overflow: hidden;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 .notify-time[data-v-e30a2353] { display: block; font-size: 0.625rem; color: #ccc; margin-top: 0.25rem;

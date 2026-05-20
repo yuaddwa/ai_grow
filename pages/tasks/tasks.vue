@@ -1,6 +1,5 @@
 <template>
   <view class="tasks-page">
-    <!-- 动态背景 -->
     <view class="bg-bubbles">
       <view class="bubble b1"></view>
       <view class="bubble b2"></view>
@@ -9,18 +8,15 @@
       <view class="bubble b5"></view>
     </view>
 
-    <!-- 返回按钮 -->
     <view class="back-btn" @tap="goBack">
       <text style="font-size:36rpx;color:#333;">‹</text>
     </view>
 
-    <!-- 标题 -->
     <view class="header" :class="{ show: loaded }">
       <text class="title">我的任务</text>
-      <text class="subtitle">管理你的待办事项</text>
+      <text class="subtitle">列表只读；完成/取消请通过 AI 对话操作</text>
     </view>
 
-    <!-- 状态筛选 -->
     <view class="tab-bar" :class="{ show: loaded }">
       <view
         class="tab-pill"
@@ -33,7 +29,6 @@
       </view>
     </view>
 
-    <!-- 任务列表 -->
     <scroll-view
       class="task-scroll"
       scroll-y
@@ -45,15 +40,15 @@
     >
       <view v-if="tasks.length === 0 && !loading" class="empty-state">
         <text style="font-size:80rpx;opacity:0.3;">📋</text>
-        <text class="empty-text">暂无任务</text>
-        <text class="empty-sub">与 AI 对话，创建你的第一个任务</text>
+        <text class="empty-text">暂无{{ activeTabLabel }}任务</text>
+        <text class="empty-sub">与 AI 对话创建或更新任务</text>
       </view>
 
       <view
         class="task-card"
         v-for="(task, i) in tasks"
         :key="task.id"
-        :class="{ show: loaded }"
+        :class="[{ show: loaded }, statusClass(task.status), { completed: isCompleted(task) }]"
         :style="{ transitionDelay: (i * 0.08) + 's' }"
         @tap="onTaskTap(task)"
       >
@@ -77,31 +72,53 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { getMyTasks } from '../../utils/api.js'
 
 const loaded = ref(false)
 const loading = ref(false)
 const refreshing = ref(false)
-const activeTab = ref('')
+const activeTab = ref('OPEN')
 const tasks = ref([])
 
 const tabs = [
-  { label: '全部', value: '' },
   { label: '进行中', value: 'OPEN' },
   { label: '已完成', value: 'DONE' },
-  { label: '已取消', value: 'CANCELLED' }
+  { label: '已取消', value: 'CANCELLED' },
+  { label: '全部', value: '' }
 ]
 
-onMounted(() => { nextTick(() => { setTimeout(() => { loaded.value = true }, 50) }) })
+const activeTabLabel = computed(() => {
+  const t = tabs.find(x => x.value === activeTab.value)
+  return t ? t.label : ''
+})
 
-onMounted(() => { loadTasks() })
+onLoad((query) => {
+  if (query && query.status) {
+    const allowed = ['OPEN', 'DONE', 'CANCELLED', '']
+    if (allowed.includes(query.status)) activeTab.value = query.status
+  }
+})
+
+onMounted(() => {
+  nextTick(() => { setTimeout(() => { loaded.value = true }, 50) })
+  loadTasks()
+})
+
+function isCompleted(task) {
+  return task && task.status === 'DONE'
+}
+
+function isActive(task) {
+  return task && task.status === 'OPEN'
+}
 
 async function loadTasks() {
   loading.value = true
   try {
     const res = await getMyTasks(activeTab.value || undefined)
-    tasks.value = res.tasks || []
+    tasks.value = res.tasks || res.items || []
   } catch (e) {
     tasks.value = []
   } finally {
@@ -118,7 +135,6 @@ function onRefresh() {
   refreshing.value = true
   loadTasks().finally(() => {
     refreshing.value = false
-    uni.stopPullDownRefresh()
   })
 }
 
@@ -132,7 +148,10 @@ function goBack() {
 }
 
 function onTaskTap(task) {
-  uni.showToast({ title: task.title, icon: 'none' })
+  const hint = isCompleted(task)
+    ? '已完成'
+    : (task.status === 'CANCELLED' ? '已取消' : '进行中，可在对话中让 AI 更新任务状态')
+  uni.showToast({ title: task.title + ' · ' + hint, icon: 'none', duration: 2500 })
 }
 
 function statusClass(status) {
@@ -154,7 +173,6 @@ function statusText(status) {
   overflow: hidden;
 }
 
-/* 动态气泡 */
 .bg-bubbles {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
   z-index: 0; overflow: hidden;
@@ -170,7 +188,6 @@ function statusText(status) {
 @keyframes float2 { 0%,100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(25rpx) translateX(15rpx); } }
 @keyframes float3 { 0%,100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-20rpx) translateX(-15rpx); } }
 
-/* 返回按钮 */
 .back-btn {
   position: absolute; top: 100rpx; left: 32rpx; z-index: 10;
   width: 64rpx; height: 64rpx; border-radius: 50%;
@@ -178,7 +195,6 @@ function statusText(status) {
   display: flex; align-items: center; justify-content: center;
 }
 
-/* 头部 */
 .header {
   position: relative; z-index: 1;
   padding: 120rpx 48rpx 20rpx 112rpx;
@@ -187,12 +203,11 @@ function statusText(status) {
 }
 .header.show { opacity: 1; transform: translateY(0); }
 .title { display: block; font-size: 48rpx; font-weight: 800; color: #222; letter-spacing: 2rpx; }
-.subtitle { display: block; font-size: 26rpx; color: #888; margin-top: 8rpx; }
+.subtitle { display: block; font-size: 24rpx; color: #888; margin-top: 8rpx; line-height: 1.5; }
 
-/* 筛选 tab */
 .tab-bar {
   position: relative; z-index: 1;
-  display: flex; gap: 16rpx; padding: 20rpx 48rpx;
+  display: flex; gap: 16rpx; padding: 20rpx 48rpx; flex-wrap: wrap;
   opacity: 0; transition: opacity 0.6s ease-out 0.15s;
 }
 .tab-bar.show { opacity: 1; }
@@ -207,19 +222,12 @@ function statusText(status) {
   box-shadow: 0 4rpx 16rpx rgba(79,172,254,0.3);
 }
 
-/* 任务列表 */
 .task-scroll {
-  position: relative;
-  z-index: 1;
-  flex: 1;
-  height: 0;
-  min-height: 0;
-  width: 100%;
-  padding: 10rpx 32rpx;
-  box-sizing: border-box;
+  position: relative; z-index: 1;
+  flex: 1; height: 0; min-height: 0; width: 100%;
+  padding: 10rpx 32rpx; box-sizing: border-box;
 }
 
-/* 空状态 */
 .empty-state {
   display: flex; flex-direction: column; align-items: center;
   padding-top: 160rpx; gap: 16rpx;
@@ -227,18 +235,18 @@ function statusText(status) {
 .empty-text { font-size: 30rpx; color: #aaa; font-weight: 600; }
 .empty-sub { font-size: 24rpx; color: #ccc; }
 
-/* 任务卡片 */
 .task-card {
   display: flex; gap: 20rpx; padding: 28rpx;
   background: rgba(255,255,255,0.92);
   border-radius: 24rpx; margin-bottom: 16rpx;
   box-shadow: 0 4rpx 20rpx rgba(79,172,254,0.06);
   border: 1rpx solid rgba(255,255,255,0.6);
-  opacity: 0;
-  transition: opacity 0.4s ease-out;
+  opacity: 0; transition: opacity 0.4s ease-out;
 }
 .task-card.show { opacity: 1; }
-.task-card:active { opacity: 0.85; }
+.task-card.completed .task-title { color: #999; text-decoration: line-through; }
+.task-card.done { opacity: 0.92; }
+.task-card.cancelled { opacity: 0.75; }
 
 .task-left { flex-shrink: 0; padding-top: 8rpx; }
 .task-status-dot {
