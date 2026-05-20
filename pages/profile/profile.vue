@@ -28,6 +28,7 @@
       <text style="font-size:36rpx;color:#333;">‹</text>
     </view>
 
+    <scroll-view class="profile-scroll" scroll-y :bounces="false" :show-scrollbar="false">
     <!-- 头部区域 -->
     <view class="hero" :class="{ show: loaded }">
       <view class="hero-bg">
@@ -104,6 +105,7 @@
 
     <!-- 底部安全区域 -->
     <view class="safe-bottom"></view>
+    </scroll-view>
 
     <!-- 编辑资料弹窗 -->
     <view class="modal-mask" v-if="editVisible" @tap="editVisible = false">
@@ -308,10 +310,21 @@ function onDeleteAccount() {
 
 <style scoped>
 .profile-page {
-  min-height: 100vh;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(180deg, #e0f4ff 0%, #eaf5ff 30%, #f5f9ff 60%, #ffffff 100%);
   position: relative;
   overflow: hidden;
+}
+
+.profile-scroll {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 /* 动态气泡 */

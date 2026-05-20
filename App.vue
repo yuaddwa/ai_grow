@@ -23,5 +23,10 @@ export default {
 </script>
 
 <style>
-	/*每个页面公共css */
+	/* 禁止页面级橡皮筋回弹，避免到顶后整屏下拉变形 */
+	page {
+		height: 100%;
+		overflow: hidden;
+		overscroll-behavior: none;
+	}
 </style>

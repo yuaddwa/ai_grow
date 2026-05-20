@@ -179,7 +179,8 @@ function goBack() {
 
 <style scoped>
 .register-page {
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   background: linear-gradient(135deg, #f0e6ff 0%, #e0ecff 30%, #e8f4fd 60%, #f0f7ff 100%);
   position: relative;
   overflow: hidden;

@@ -25,7 +25,14 @@
       </view>
     </view>
 
-    <scroll-view class="chat-scroll" scroll-y :scroll-top="scrollTop" scroll-with-animation>
+    <scroll-view
+      class="chat-scroll"
+      scroll-y
+      :bounces="false"
+      :show-scrollbar="false"
+      :scroll-top="scrollTop"
+      scroll-with-animation
+    >
       <view class="msg-list">
         <view
           v-for="(msg, i) in messages"
@@ -40,7 +47,7 @@
             <view v-if="msg.role === 'ai'" class="card-ai">
             <view v-if="msg.type === 'text'">
               <text class="ai-hd" v-if="msg.title">{{ msg.title }}</text>
-              <text class="ai-bd">{{ msg.content }}</text>
+              <markdown-content class="ai-bd" :content="msg.content" />
               <text class="ai-tip" v-if="msg.tip">{{ msg.tip }}</text>
             </view>
             <view v-if="msg.type === 'plan'">
@@ -123,9 +130,17 @@
         />
       </view>
       <!-- 语音模式 -->
-      <view v-else class="voice-area" hover-class="voice-area-hover" :hover-start-time="10">
+      <view
+        v-else
+        class="voice-area"
+        :class="{ recording: isRecording }"
+        @touchstart.stop="onVoiceTouchStart"
+        @touchend.stop="onVoiceTouchEnd"
+        @touchcancel.stop="onVoiceTouchEnd"
+        @touchmove.stop.prevent="onVoiceTouchMove"
+      >
         <text class="voice-tip" :class="{ recording: isRecording }">
-          {{ isRecording ? '正在录音...点击停止' : '点击说话' }}
+          {{ isRecording ? '松开 结束' : '按住 说话' }}
         </text>
       </view>
 
@@ -149,7 +164,10 @@
           v-else
           class="inp-mic"
           :class="{ pressed: isRecording }"
-          @click="toggleVoice"
+          @touchstart.stop="onVoiceTouchStart"
+          @touchend.stop="onVoiceTouchEnd"
+          @touchcancel.stop="onVoiceTouchEnd"
+          @touchmove.stop.prevent="onVoiceTouchMove"
         >
           <text style="font-size:28rpx;color:#fff;">🎤</text>
         </view>
@@ -195,6 +213,9 @@ const composing = ref(false)
 let recorderManager = null
 let h5MediaRecorder = null
 let isProcessingVoice = false
+let touchRecording = false
+let recordStarting = false
+const MIN_RECORD_MS = 800
 
 const addOptions = [
   { key: 'photo', label: '照片', bg: '#ece5ff', color: '#7b6df0' }
@@ -286,90 +307,171 @@ function onSend() {
 
 let recordStartTime = 0
 
-function toggleVoice() {
-  if (isRecording.value) {
-    if (Date.now() - recordStartTime < 800) return // 录音不足 0.8s 忽略
-    stopRecord()
-  } else {
-    recordStartTime = Date.now()
-    startRecord()
-  }
+function ensureRecordPermission() {
+  return new Promise((resolve, reject) => {
+    const sys = uni.getSystemInfoSync()
+    if (sys.platform === 'android' && typeof plus !== 'undefined' && plus.android) {
+      plus.android.requestPermissions(
+        ['android.permission.RECORD_AUDIO'],
+        (e) => {
+          if (e.granted && e.granted.length > 0) resolve()
+          else reject(new Error('denied'))
+        },
+        reject
+      )
+      return
+    }
+    if (sys.uniPlatform === 'mp-weixin') {
+      uni.authorize({
+        scope: 'scope.record',
+        success: () => resolve(),
+        fail: () => reject(new Error('denied'))
+      })
+      return
+    }
+    resolve()
+  })
 }
 
-function startRecord() {
+function initRecorderManager() {
+  if (recorderManager) return
+  recorderManager = uni.getRecorderManager()
+  recorderManager.onStart(() => {
+    console.log('recorderManager onStart')
+    isRecording.value = true
+  })
+  recorderManager.onStop((res) => {
+    console.log('recorderManager onStop:', JSON.stringify(res))
+    isRecording.value = false
+    touchRecording = false
+    recordStarting = false
+    if (isProcessingVoice) return
+    const duration = res.duration || (Date.now() - recordStartTime)
+    if (duration < MIN_RECORD_MS) {
+      uni.showToast({ title: '说话时间太短，请按住多说一会儿', icon: 'none' })
+      return
+    }
+    if (res.tempFilePath) {
+      isProcessingVoice = true
+      handleVoiceResult(res.tempFilePath)
+    } else {
+      uni.showToast({ title: '未获取到录音文件', icon: 'none' })
+    }
+  })
+  recorderManager.onError((err) => {
+    console.error('recorderManager onError:', JSON.stringify(err))
+    isRecording.value = false
+    touchRecording = false
+    recordStarting = false
+    uni.showToast({ title: '录音失败', icon: 'none' })
+  })
+}
+
+async function onVoiceTouchStart() {
+  if (touchRecording || recordStarting || isProcessingVoice) return
   if (!getAccessToken()) {
     uni.showToast({ title: '请先登录', icon: 'none' })
     setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }) }, 800)
     return
   }
 
-  isRecording.value = true
+  touchRecording = true
+  recordStarting = true
+  recordStartTime = Date.now()
 
+  try {
+    await ensureRecordPermission()
+    recordStarting = false
+    if (!touchRecording) return
+    startRecord()
+  } catch (e) {
+    touchRecording = false
+    recordStarting = false
+    uni.showModal({
+      title: '需要麦克风权限',
+      content: '请在系统设置中允许本应用使用麦克风',
+      confirmText: '知道了',
+      showCancel: false
+    })
+  }
+}
+
+function onVoiceTouchMove() {
+  // 按住说话时阻止滑动带走触摸序列
+}
+
+function onVoiceTouchEnd() {
+  if (!touchRecording && !recordStarting && !isRecording.value) return
+  touchRecording = false
+  if (recordStarting) {
+    recordStarting = false
+    return
+  }
+  recordStarting = false
+  stopRecord()
+}
+
+function startRecord() {
   const platform = uni.getSystemInfoSync().platform
 
-  // App / 小程序：uni.getRecorderManager
   if (platform !== 'web') {
     try {
-      if (!recorderManager) {
-        recorderManager = uni.getRecorderManager()
-        recorderManager.onStop((res) => {
-          console.log('recorderManager onStop:', JSON.stringify(res))
-          isRecording.value = false
-          if (isProcessingVoice) return
-          if (res.tempFilePath) {
-            isProcessingVoice = true
-            handleVoiceResult(res.tempFilePath)
-          }
-        })
-        recorderManager.onError((err) => {
-          console.error('recorderManager onError:', JSON.stringify(err))
-          isRecording.value = false
-          uni.showToast({ title: '录音失败', icon: 'none' })
-        })
-      }
+      initRecorderManager()
       recorderManager.start({
-        duration: 60, sampleRate: 16000,
-        numberOfChannels: 1, encodeBitRate: 48000, format: 'mp3'
+        duration: 60000,
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        encodeBitRate: 48000,
+        format: 'mp3'
       })
-      return
     } catch (e) {
-      isRecording.value = false
+      touchRecording = false
+      recordStarting = false
       uni.showToast({ title: '录音初始化失败', icon: 'none' })
-      return
     }
+    return
   }
 
-  // H5 浏览器：MediaRecorder API
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    isRecording.value = false
+    touchRecording = false
+    recordStarting = false
     uni.showToast({ title: '当前环境不支持录音', icon: 'none' })
     return
   }
 
   navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    if (!touchRecording) {
+      stream.getTracks().forEach(t => t.stop())
+      return
+    }
     const mr = new MediaRecorder(stream)
     const chunks = []
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
+    mr.onstart = () => { isRecording.value = true }
     mr.onstop = () => {
       stream.getTracks().forEach(t => t.stop())
       isRecording.value = false
+      touchRecording = false
+      const elapsed = Date.now() - recordStartTime
+      if (elapsed < MIN_RECORD_MS) {
+        uni.showToast({ title: '说话时间太短，请按住多说一会儿', icon: 'none' })
+        return
+      }
       const blob = new Blob(chunks, { type: 'audio/webm' })
-      // H5 用 fetch 直接上传，不走 uni.uploadFile
       uploadAndTranscribeBlob(blob)
     }
     mr.start()
     h5MediaRecorder = mr
   }).catch(() => {
-    isRecording.value = false
+    touchRecording = false
+    recordStarting = false
     uni.showToast({ title: '无法访问麦克风', icon: 'none' })
   })
 }
 
 function stopRecord() {
-  if (!isRecording.value) return
-  isRecording.value = false
   if (recorderManager) {
-    recorderManager.stop()
+    try { recorderManager.stop() } catch (e) { /* 可能尚未 start */ }
   } else if (h5MediaRecorder && h5MediaRecorder.state === 'recording') {
     h5MediaRecorder.stop()
   }
@@ -497,12 +599,13 @@ function onAdd(key) {
 </script>
 
 <style scoped>
-page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%); }
+page { height: 100%; background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%); }
 
 .page {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%);
   padding-top: 100rpx;
   box-sizing: border-box;
@@ -513,10 +616,11 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
 
 .banner.show { opacity: 1; transform: translateY(0); }
 .func-bar.show { opacity: 1; transform: translateY(0); }
-.msg-item.show { opacity: 1; transform: scale(1) translateY(0); }
+.msg-item.show { opacity: 1; transform: none; }
 
 /* Banner */
 .banner {
+  flex-shrink: 0;
   background: linear-gradient(135deg, #4facfe 0%, #6cb4ee 50%, #a8d8ff 100%);
   border-radius: 16rpx;
   padding: 24rpx 28rpx;
@@ -568,6 +672,7 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
 
 /* 功能标签 */
 .func-bar {
+  flex-shrink: 0;
   display: flex;
   gap: 12rpx;
   padding: 0 24rpx;
@@ -592,19 +697,25 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
 }
 
 /* 聊天 */
-.chat-scroll { flex: 1; padding: 0 24rpx; overflow: hidden; }
+.chat-scroll {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  width: 100%;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+}
 .msg-list { padding-bottom: 14rpx; }
 .msg-item {
   margin-bottom: 14rpx;
   opacity: 0;
-  transform: scale(0.94) translateY(12rpx);
-  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+  transition: opacity 0.3s ease-out;
 }
 .align-left { display: flex; justify-content: flex-start; align-items: flex-start; gap: 12rpx; }
 .align-right { display: flex; justify-content: flex-end; }
 
 .card-ai {
-  background: #fff; border-radius: 16rpx; padding: 22rpx; max-width: 78%;
+  background: #fff; border-radius: 16rpx; padding: 22rpx; max-width: 88%;
   box-shadow: 0 2rpx 10rpx rgba(79,172,254,0.06);
 }
 .ai-avatar {
@@ -620,7 +731,7 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
   box-shadow: 0 2rpx 8rpx rgba(79,172,254,0.12);
 }
 .ai-hd { display: block; font-size: 28rpx; font-weight: 600; color: #222; margin-bottom: 10rpx; }
-.ai-bd { display: block; font-size: 24rpx; color: #555; line-height: 1.8; }
+.ai-bd { display: block; width: 100%; font-size: 24rpx; color: #555; line-height: 1.8; }
 .ai-tip { display: block; font-size: 24rpx; color: #99c4e8; line-height: 1.8; margin-top: 4rpx; }
 
 .card-user {
@@ -702,6 +813,7 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
 
 /* 输入栏 */
 .input-card {
+  flex-shrink: 0;
   background: #fff; border-radius: 18rpx;
   padding: 16rpx 18rpx 20rpx; margin: 0 24rpx 20rpx;
   box-shadow: 0 2rpx 12rpx rgba(79,172,254,0.08);
@@ -712,9 +824,11 @@ page { background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%
 .voice-area {
   padding: 24rpx 0; text-align: center;
   min-height: 80rpx; box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
 }
-.voice-area-hover {
-  background: rgba(79,172,254,0.05);
+.voice-area.recording {
+  background: rgba(79,172,254,0.08);
   border-radius: 12rpx;
 }
 .voice-tip {

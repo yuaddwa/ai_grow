@@ -29,7 +29,15 @@
     </view>
 
     <!-- 通知列表 -->
-    <scroll-view class="notify-scroll" scroll-y :refresher-enabled="true" :refresher-triggered="refreshing" @refresherrefresh="onRefresh">
+    <scroll-view
+      class="notify-scroll"
+      scroll-y
+      :bounces="false"
+      :show-scrollbar="false"
+      :refresher-enabled="true"
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+    >
       <view v-if="notifications.length === 0 && !loading" class="empty-state">
         <text style="font-size:80rpx;opacity:0.3;">📋</text>
         <text class="empty-text">暂无通知</text>
@@ -149,9 +157,12 @@ function formatTime(dateStr) {
 
 <style scoped>
 .notify-page {
-  min-height: 100vh;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(180deg, #fff5e6 0%, #fff8f0 30%, #ffffff 100%);
-  position: relative; overflow: hidden;
+  position: relative;
+  overflow: hidden;
 }
 
 /* 动态气泡 */
@@ -198,8 +209,14 @@ function formatTime(dateStr) {
 
 /* 通知列表 */
 .notify-scroll {
-  position: relative; z-index: 1;
-  flex: 1; height: calc(100vh - 280rpx); padding: 10rpx 32rpx;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  width: 100%;
+  padding: 10rpx 32rpx;
+  box-sizing: border-box;
 }
 
 /* 空状态 */
@@ -217,11 +234,11 @@ function formatTime(dateStr) {
   border-radius: 20rpx; margin-bottom: 14rpx;
   box-shadow: 0 2rpx 16rpx rgba(255,165,0,0.05);
   border: 1rpx solid rgba(255,255,255,0.6);
-  opacity: 0; transform: translateY(16rpx);
-  transition: opacity 0.35s ease-out, transform 0.35s ease-out;
+  opacity: 0;
+  transition: opacity 0.35s ease-out;
 }
-.notify-card.show { opacity: 1; transform: translateY(0); }
-.notify-card:active { transform: scale(0.98); }
+.notify-card.show { opacity: 1; }
+.notify-card:active { opacity: 0.85; }
 .notify-card.unread {
   border-left: 6rpx solid #ffa500;
 }

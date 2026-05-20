@@ -226,7 +226,8 @@ function onForgotPw() {
 
 <style scoped>
 .login-page {
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   background: linear-gradient(135deg, #e8f4fd 0%, #d4ecff 30%, #e0f0ff 60%, #f0f7ff 100%);
   position: relative;
   overflow: hidden;
