@@ -1,0 +1,164 @@
+/**
+ * AI 回复加载动画样式
+ * 更换动画：直接修改本文件，或替换为新的 CSS（保持下方类名与 index.vue 模板一致）
+ *
+ * 模板结构（pages/index/index.vue）：
+ *   .ai-loading-wrap > .ai-reply-loader > svg / .text
+ */
+
+.ai-loading-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 8rpx 56rpx;
+  min-width: 140rpx;
+  min-height: 180rpx;
+}
+
+.ai-reply-loader {
+  --background: #62abff;
+  --front-color: #4f29f0;
+  --back-color: #c3c8de;
+  --text-color: #414856;
+  width: 64px;
+  height: 64px;
+  border-radius: 50px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ai-reply-loader svg {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ai-reply-loader svg circle {
+  position: absolute;
+  fill: none;
+  stroke-width: 6px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: rotate(-100deg);
+  transform-origin: center;
+}
+
+.ai-reply-loader svg circle.back {
+  stroke: var(--back-color);
+}
+
+.ai-reply-loader svg circle.front {
+  stroke: var(--front-color);
+}
+
+.ai-reply-loader svg.circle-outer {
+  height: 86px;
+  width: 86px;
+}
+
+.ai-reply-loader svg.circle-outer circle {
+  stroke-dasharray: 62.75 188.25;
+}
+
+.ai-reply-loader svg.circle-outer circle.back {
+  animation: ai-reply-circle-outer 1.8s ease infinite 0.3s;
+}
+
+.ai-reply-loader svg.circle-outer circle.front {
+  animation: ai-reply-circle-outer 1.8s ease infinite 0.15s;
+}
+
+.ai-reply-loader svg.circle-middle {
+  height: 60px;
+  width: 60px;
+}
+
+.ai-reply-loader svg.circle-middle circle {
+  stroke-dasharray: 42.5 127.5;
+}
+
+.ai-reply-loader svg.circle-middle circle.back {
+  animation: ai-reply-circle-middle 1.8s ease infinite 0.25s;
+}
+
+.ai-reply-loader svg.circle-middle circle.front {
+  animation: ai-reply-circle-middle 1.8s ease infinite 0.1s;
+}
+
+.ai-reply-loader svg.circle-inner {
+  height: 34px;
+  width: 34px;
+}
+
+.ai-reply-loader svg.circle-inner circle {
+  stroke-dasharray: 22 66;
+}
+
+.ai-reply-loader svg.circle-inner circle.back {
+  animation: ai-reply-circle-inner 1.8s ease infinite 0.2s;
+}
+
+.ai-reply-loader svg.circle-inner circle.front {
+  animation: ai-reply-circle-inner 1.8s ease infinite 0.05s;
+}
+
+.ai-reply-loader .text {
+  position: absolute;
+  bottom: -40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-transform: lowercase;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.2px;
+}
+
+.ai-reply-loader .text::before,
+.ai-reply-loader .text::after {
+  content: attr(data-text);
+}
+
+.ai-reply-loader .text::before {
+  color: var(--text-color);
+}
+
+.ai-reply-loader .text::after {
+  color: var(--front-color);
+  animation: ai-reply-text 3.6s ease infinite;
+  position: absolute;
+  left: 0;
+}
+
+@keyframes ai-reply-circle-outer {
+  0% { stroke-dashoffset: 25; }
+  25% { stroke-dashoffset: 0; }
+  65% { stroke-dashoffset: 301; }
+  80% { stroke-dashoffset: 276; }
+  100% { stroke-dashoffset: 276; }
+}
+
+@keyframes ai-reply-circle-middle {
+  0% { stroke-dashoffset: 17; }
+  25% { stroke-dashoffset: 0; }
+  65% { stroke-dashoffset: 204; }
+  80% { stroke-dashoffset: 187; }
+  100% { stroke-dashoffset: 187; }
+}
+
+@keyframes ai-reply-circle-inner {
+  0% { stroke-dashoffset: 9; }
+  25% { stroke-dashoffset: 0; }
+  65% { stroke-dashoffset: 106; }
+  80% { stroke-dashoffset: 97; }
+  100% { stroke-dashoffset: 97; }
+}
+
+@keyframes ai-reply-text {
+  0% { clip-path: inset(0 100% 0 0); }
+  50% { clip-path: inset(0); }
+  100% { clip-path: inset(0 0 0 100%); }
+}

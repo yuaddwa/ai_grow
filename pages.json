@@ -5,7 +5,10 @@
 			"style": {
 				"navigationStyle": "custom",
 				"navigationBarTitleText": "AI成长",
-				"disableScroll": true
+				"disableScroll": true,
+				"app-plus": {
+					"softinputMode": "adjustResize"
+				}
 			}
 		},
 		{

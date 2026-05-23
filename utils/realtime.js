@@ -1,4 +1,5 @@
 import { store, refreshUnreadCount } from './store.js'
+import { playNotificationSound } from './notifySound.js'
 
 const chatReplyListeners = []
 const notifyListeners = []
@@ -45,6 +46,7 @@ export function handleRealtimeMessage(data) {
         refreshUnreadCount()
       }
       emitNotifyChange()
+      playNotificationSound()
       // #ifdef APP-PLUS
       if (data.title) {
         uni.showToast({ title: data.title, icon: 'none', duration: 2500 })
@@ -55,6 +57,7 @@ export function handleRealtimeMessage(data) {
       if (data.unreadCount !== undefined) {
         store.unreadCount = Number(data.unreadCount) || 0
       }
+      playNotificationSound()
       chatReplyListeners.forEach(fn => {
         try { fn(data) } catch (e) {}
       })

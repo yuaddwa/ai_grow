@@ -960,12 +960,50 @@ if (uni.restoreGlobal) {
       return Promise.resolve(0);
     }
     return getUnreadCount().then((res) => {
-      store.unreadCount = res.count || 0;
+      const n = res.unreadCount ?? res.count;
+      store.unreadCount = Number(n) || 0;
       return store.unreadCount;
     }).catch(() => {
       store.unreadCount = 0;
       return 0;
     });
+  }
+  let audio = null;
+  let lastPlayAt = 0;
+  const MIN_INTERVAL_MS = 1200;
+  function playNotificationSound() {
+    const now = Date.now();
+    if (now - lastPlayAt < MIN_INTERVAL_MS)
+      return;
+    lastPlayAt = now;
+    try {
+      if (!audio) {
+        audio = uni.createInnerAudioContext();
+        audio.src = "/static/notify.mp3";
+        audio.volume = 0.85;
+        audio.autoplay = false;
+        audio.onError(() => {
+          tryBeep();
+        });
+      }
+      try {
+        audio.stop();
+      } catch (e) {
+      }
+      audio.seek(0);
+      audio.play();
+      return;
+    } catch (e) {
+      tryBeep();
+    }
+  }
+  function tryBeep() {
+    try {
+      if (typeof plus !== "undefined" && plus.device && plus.device.beep) {
+        plus.device.beep(1);
+      }
+    } catch (e) {
+    }
   }
   const chatReplyListeners = [];
   const notifyListeners = [];
@@ -1011,6 +1049,7 @@ if (uni.restoreGlobal) {
           refreshUnreadCount();
         }
         emitNotifyChange();
+        playNotificationSound();
         if (data.title) {
           uni.showToast({ title: data.title, icon: "none", duration: 2500 });
         }
@@ -1019,6 +1058,7 @@ if (uni.restoreGlobal) {
         if (data.unreadCount !== void 0) {
           store.unreadCount = Number(data.unreadCount) || 0;
         }
+        playNotificationSound();
         chatReplyListeners.forEach((fn) => {
           try {
             fn(data);
@@ -1053,6 +1093,8 @@ if (uni.restoreGlobal) {
       const sessionsPage = vue.ref(0);
       const sessionsHasNext = vue.ref(false);
       const playingVoiceKey = vue.ref(null);
+      const keyboardHeight = vue.ref(0);
+      let keyboardHandler = null;
       let recorderManager = null;
       let innerAudioContext = null;
       let h5MediaRecorder = null;
@@ -1074,7 +1116,6 @@ if (uni.restoreGlobal) {
         return [{ ...WELCOME_MESSAGE }];
       }
       const messages = vue.ref(getWelcomeMessages());
-      const showTags = vue.computed(() => messages.value.length <= 2);
       function openPendingSessionIfAny() {
         const pending = uni.getStorageSync("pendingOpenSessionId");
         if (!pending || !getAccessToken())
@@ -1089,6 +1130,13 @@ if (uni.restoreGlobal) {
         }
       });
       vue.onMounted(() => {
+        keyboardHandler = (res) => {
+          keyboardHeight.value = res.height || 0;
+          if (keyboardHeight.value > 0) {
+            vue.nextTick(() => setTimeout(scroll, 80));
+          }
+        };
+        uni.onKeyboardHeightChange(keyboardHandler);
         vue.nextTick(() => {
           setTimeout(() => {
             loaded.value = true;
@@ -1121,6 +1169,17 @@ if (uni.restoreGlobal) {
           }
         }
       });
+      vue.onUnmounted(() => {
+        if (keyboardHandler)
+          uni.offKeyboardHeightChange(keyboardHandler);
+      });
+      function onInputFocus() {
+        inputFocus.value = true;
+        scroll();
+      }
+      function onInputBlur() {
+        inputFocus.value = false;
+      }
       function scroll() {
         vue.nextTick(() => {
           scrollTop.value = Math.random() * 99999;
@@ -1564,15 +1623,15 @@ if (uni.restoreGlobal) {
           return;
         }
         const key = voiceMsgKey(msg);
-        const audio = getInnerAudio();
+        const audio2 = getInnerAudio();
         if (playingVoiceKey.value === key) {
-          audio.stop();
+          audio2.stop();
           playingVoiceKey.value = null;
           return;
         }
         playingVoiceKey.value = key;
-        audio.src = url;
-        audio.play();
+        audio2.src = url;
+        audio2.play();
       }
       function openHistory() {
         if (!getAccessToken()) {
@@ -1719,11 +1778,11 @@ if (uni.restoreGlobal) {
           return;
         recorderManager = uni.getRecorderManager();
         recorderManager.onStart(() => {
-          formatAppLog("log", "at pages/index/index.vue:1034", "recorderManager onStart");
+          formatAppLog("log", "at pages/index/index.vue:1013", "recorderManager onStart");
           isRecording.value = true;
         });
         recorderManager.onStop((res) => {
-          formatAppLog("log", "at pages/index/index.vue:1038", "recorderManager onStop:", JSON.stringify(res));
+          formatAppLog("log", "at pages/index/index.vue:1017", "recorderManager onStop:", JSON.stringify(res));
           isRecording.value = false;
           touchRecording = false;
           recordStarting = false;
@@ -1742,7 +1801,7 @@ if (uni.restoreGlobal) {
           }
         });
         recorderManager.onError((err) => {
-          formatAppLog("error", "at pages/index/index.vue:1056", "recorderManager onError:", JSON.stringify(err));
+          formatAppLog("error", "at pages/index/index.vue:1035", "recorderManager onError:", JSON.stringify(err));
           isRecording.value = false;
           touchRecording = false;
           recordStarting = false;
@@ -1905,7 +1964,7 @@ if (uni.restoreGlobal) {
         xhr.send(form);
       }
       function handleVoiceResult(filePath) {
-        formatAppLog("log", "at pages/index/index.vue:1214", "handleVoiceResult filePath:", filePath);
+        formatAppLog("log", "at pages/index/index.vue:1193", "handleVoiceResult filePath:", filePath);
         messages.value.push({
           role: "user",
           content: "[语音] 识别中...",
@@ -1967,34 +2026,6 @@ if (uni.restoreGlobal) {
           sending.value = false;
         });
       }
-      function onQuick(t) {
-        if (sending.value)
-          return;
-        sending.value = true;
-        messages.value.push({ role: "user", content: t, show: true });
-        scroll();
-        pushAiLoading();
-        sendChatMessage(t, sessionId.value || void 0).then((res) => {
-          onChatSuccess(res);
-        }).catch((e) => {
-          removeAiLoading();
-          if (e && e.code === "UNAUTHORIZED") {
-            uni.showToast({ title: "请先登录", icon: "none" });
-            setTimeout(() => {
-              uni.navigateTo({ url: "/pages/login/login" });
-            }, 800);
-          } else {
-            messages.value.push({ role: "ai", type: "text", title: "", content: "网络异常，请稍后重试", tip: "", show: true });
-            scroll();
-          }
-        }).finally(() => {
-          sending.value = false;
-        });
-      }
-      function onFeature(type) {
-        const map = { plan: "我想录入今天的计划", recommend: "帮我推荐一些高效的习惯", calendar: "查看今天的日程安排", stats: "帮我看看最近的数据统计" };
-        onQuick(map[type]);
-      }
       function showAddMenu() {
         addVisible.value = true;
       }
@@ -2002,7 +2033,11 @@ if (uni.restoreGlobal) {
         addVisible.value = false;
         uni.showToast({ title: "已选择照片", icon: "none" });
       }
-      const __returned__ = { loaded, scrollTop, inputText, inputMode, inputFocus, isRecording, addVisible, recordTimer, sessionId, sending, userAvatar, composing, historyVisible, sessionList, loadingSession, loadingSessions, sessionsRefreshing, sessionsPage, sessionsHasNext, playingVoiceKey, get recorderManager() {
+      const __returned__ = { loaded, scrollTop, inputText, inputMode, inputFocus, isRecording, addVisible, recordTimer, sessionId, sending, userAvatar, composing, historyVisible, sessionList, loadingSession, loadingSessions, sessionsRefreshing, sessionsPage, sessionsHasNext, playingVoiceKey, keyboardHeight, get keyboardHandler() {
+        return keyboardHandler;
+      }, set keyboardHandler(v) {
+        keyboardHandler = v;
+      }, get recorderManager() {
         return recorderManager;
       }, set recorderManager(v) {
         recorderManager = v;
@@ -2026,7 +2061,7 @@ if (uni.restoreGlobal) {
         return recordStarting;
       }, set recordStarting(v) {
         recordStarting = v;
-      }, MIN_RECORD_MS, addOptions, WELCOME_MESSAGE, getWelcomeMessages, messages, showTags, openPendingSessionIfAny, scroll, pickVoiceUrl, pickProposalIdFromMessage, looksLikePlanDraftReply, createPlanProposalShell, proposalResultMessage, applyProposalDetail, mapApiMessage, mapApiToMessages, deriveSessionTitle, pushAiLoading, removeAiLoading, persistSession, mapSessionItem, applySessionsPage, onSessionsRefresh, refreshSessions, loadMoreSessions, mergeCachedPlanProposals, enrichPlanProposalsForSession, hydratePlanProposalMessages, mergeVoiceFromCache, formatMinutes, formatPlanDate, formatPlanExpire, proposalStatusText, appendPlanProposalMessage, onConfirmProposal, onRejectProposal, onChatSuccess, formatSessionTime, formatVoiceLabel, voiceMsgKey, isPlayingVoice, getInnerAudio, playVoice, openHistory, createNewSession, loadSession, goPlans, goNotifications, goTasks, goLogin, toggleMode, onSend, get recordStartTime() {
+      }, MIN_RECORD_MS, addOptions, WELCOME_MESSAGE, getWelcomeMessages, messages, openPendingSessionIfAny, onInputFocus, onInputBlur, scroll, pickVoiceUrl, pickProposalIdFromMessage, looksLikePlanDraftReply, createPlanProposalShell, proposalResultMessage, applyProposalDetail, mapApiMessage, mapApiToMessages, deriveSessionTitle, pushAiLoading, removeAiLoading, persistSession, mapSessionItem, applySessionsPage, onSessionsRefresh, refreshSessions, loadMoreSessions, mergeCachedPlanProposals, enrichPlanProposalsForSession, hydratePlanProposalMessages, mergeVoiceFromCache, formatMinutes, formatPlanDate, formatPlanExpire, proposalStatusText, appendPlanProposalMessage, onConfirmProposal, onRejectProposal, onChatSuccess, formatSessionTime, formatVoiceLabel, voiceMsgKey, isPlayingVoice, getInnerAudio, playVoice, openHistory, createNewSession, loadSession, goPlans, goNotifications, goTasks, goLogin, toggleMode, onSend, get recordStartTime() {
         return recordStartTime;
       }, set recordStartTime(v) {
         recordStartTime = v;
@@ -2034,7 +2069,7 @@ if (uni.restoreGlobal) {
         return lastVoiceBlobUrl;
       }, set lastVoiceBlobUrl(v) {
         lastVoiceBlobUrl = v;
-      }, ensureRecordPermission, initRecorderManager, onVoiceTouchStart, onVoiceTouchEnd, startRecord, stopRecord, uploadAndTranscribeBlob, handleVoiceResult, onTranscribeSuccess, onQuick, onFeature, showAddMenu, onAdd, ref: vue.ref, nextTick: vue.nextTick, computed: vue.computed, onMounted: vue.onMounted, get onShow() {
+      }, ensureRecordPermission, initRecorderManager, onVoiceTouchStart, onVoiceTouchEnd, startRecord, stopRecord, uploadAndTranscribeBlob, handleVoiceResult, onTranscribeSuccess, showAddMenu, onAdd, ref: vue.ref, nextTick: vue.nextTick, onMounted: vue.onMounted, onUnmounted: vue.onUnmounted, get onShow() {
         return onShow;
       }, get getAccessToken() {
         return getAccessToken;
@@ -2085,487 +2120,434 @@ if (uni.restoreGlobal) {
   };
   function _sfc_render$7(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_markdown_content = resolveEasycom(vue.resolveDynamicComponent("markdown-content"), __easycom_0);
-    return vue.openBlock(), vue.createElementBlock("view", { class: "page" }, [
-      vue.createElementVNode(
-        "view",
-        {
-          class: vue.normalizeClass(["banner", { show: $setup.loaded }])
-        },
-        [
-          vue.createElementVNode("view", { class: "banner-row" }, [
-            vue.createElementVNode("text", { style: { "font-size": "48rpx" } }, "🤖"),
-            vue.createElementVNode("view", { class: "banner-texts" }, [
-              vue.createElementVNode("text", { class: "banner-title" }, "AI成长"),
-              vue.createElementVNode("text", { class: "banner-sub" }, "你的智能计划助手")
-            ]),
-            vue.createElementVNode("view", {
-              class: "plan-entry",
-              onClick: $setup.goNotifications
-            }, [
-              vue.createElementVNode("text", { style: { "font-size": "28rpx", "color": "#fff" } }, "🔔"),
-              $setup.store.unreadCount > 0 ? (vue.openBlock(), vue.createElementBlock("view", {
-                key: 0,
-                class: "badge"
+    return vue.openBlock(), vue.createElementBlock(
+      "view",
+      {
+        class: vue.normalizeClass(["page", { "keyboard-open": $setup.keyboardHeight > 0 }])
+      },
+      [
+        vue.createElementVNode(
+          "view",
+          {
+            class: vue.normalizeClass(["top-bar", { show: $setup.loaded }])
+          },
+          [
+            vue.createElementVNode("text", { class: "top-title" }, "AI成长"),
+            vue.createElementVNode("view", { class: "top-actions" }, [
+              vue.createElementVNode("text", {
+                class: "top-link",
+                onClick: $setup.openHistory
+              }, "历史"),
+              vue.createElementVNode("text", {
+                class: "top-link",
+                onClick: $setup.createNewSession
+              }, "新对话"),
+              vue.createElementVNode("view", {
+                class: "top-link-wrap",
+                onClick: $setup.goNotifications
               }, [
-                vue.createElementVNode(
-                  "text",
-                  { class: "badge-text" },
-                  vue.toDisplayString($setup.store.unreadCount > 99 ? "99+" : $setup.store.unreadCount),
-                  1
-                  /* TEXT */
-                )
-              ])) : vue.createCommentVNode("v-if", true)
-            ]),
-            vue.createElementVNode("view", {
-              class: "plan-entry",
-              onClick: $setup.goTasks
-            }, [
-              vue.createElementVNode("text", { style: { "font-size": "28rpx", "color": "#fff" } }, "📋")
-            ]),
-            vue.createElementVNode("view", {
-              class: "plan-entry",
-              onClick: $setup.goLogin
-            }, [
-              vue.createElementVNode("text", { style: { "font-size": "28rpx", "color": "#fff" } }, "👤")
-            ]),
-            vue.createElementVNode("view", {
-              class: "plan-entry",
-              onClick: $setup.openHistory
-            }, [
-              vue.createElementVNode("text", { style: { "font-size": "28rpx", "color": "#fff" } }, "💬")
-            ]),
-            vue.createElementVNode("view", {
-              class: "plan-entry",
-              onClick: $setup.createNewSession
-            }, [
-              vue.createElementVNode("text", { style: { "font-size": "28rpx", "color": "#fff" } }, "＋")
-            ]),
-            vue.createElementVNode("view", {
-              class: "plan-entry",
-              onClick: $setup.goPlans
-            }, [
-              vue.createElementVNode("text", { class: "plan-entry-txt" }, "计划 ›")
+                vue.createElementVNode("text", { class: "top-link" }, "通知"),
+                $setup.store.unreadCount > 0 ? (vue.openBlock(), vue.createElementBlock("view", {
+                  key: 0,
+                  class: "badge"
+                }, [
+                  vue.createElementVNode(
+                    "text",
+                    { class: "badge-text" },
+                    vue.toDisplayString($setup.store.unreadCount > 99 ? "99+" : $setup.store.unreadCount),
+                    1
+                    /* TEXT */
+                  )
+                ])) : vue.createCommentVNode("v-if", true)
+              ]),
+              vue.createElementVNode("text", {
+                class: "top-link",
+                onClick: $setup.goPlans
+              }, "计划"),
+              vue.createElementVNode("text", {
+                class: "top-link",
+                onClick: $setup.goLogin
+              }, "我的")
             ])
-          ])
-        ],
-        2
-        /* CLASS */
-      ),
-      vue.createElementVNode("scroll-view", {
-        class: "chat-scroll",
-        "scroll-y": "",
-        bounces: false,
-        "show-scrollbar": false,
-        "scroll-top": $setup.scrollTop,
-        "scroll-with-animation": ""
-      }, [
-        vue.createElementVNode("view", { class: "msg-list" }, [
-          (vue.openBlock(true), vue.createElementBlock(
-            vue.Fragment,
-            null,
-            vue.renderList($setup.messages, (msg, i) => {
-              return vue.openBlock(), vue.createElementBlock(
-                "view",
-                {
-                  key: i,
-                  class: vue.normalizeClass(["msg-item", [msg.role === "user" ? "align-right" : "align-left", { show: msg.show }]]),
-                  style: vue.normalizeStyle({ transitionDelay: i * 0.06 + "s" })
-                },
-                [
-                  msg.role === "ai" ? (vue.openBlock(), vue.createElementBlock("view", {
-                    key: 0,
-                    class: "ai-avatar"
-                  }, [
-                    vue.createElementVNode("text", { style: { "font-size": "36rpx" } }, "🤖")
-                  ])) : vue.createCommentVNode("v-if", true),
-                  msg.role === "ai" ? (vue.openBlock(), vue.createElementBlock("view", {
-                    key: 1,
-                    class: "card-ai"
-                  }, [
-                    msg.type === "loading" ? (vue.openBlock(), vue.createElementBlock("view", {
+          ],
+          2
+          /* CLASS */
+        ),
+        vue.createElementVNode("scroll-view", {
+          class: "chat-scroll",
+          "scroll-y": "",
+          bounces: false,
+          "show-scrollbar": false,
+          "scroll-top": $setup.scrollTop,
+          "scroll-with-animation": ""
+        }, [
+          vue.createElementVNode("view", { class: "msg-list" }, [
+            (vue.openBlock(true), vue.createElementBlock(
+              vue.Fragment,
+              null,
+              vue.renderList($setup.messages, (msg, i) => {
+                return vue.openBlock(), vue.createElementBlock(
+                  "view",
+                  {
+                    key: i,
+                    class: vue.normalizeClass(["msg-item", [msg.role === "user" ? "align-right" : "align-left", { show: msg.show }]]),
+                    style: vue.normalizeStyle({ transitionDelay: i * 0.06 + "s" })
+                  },
+                  [
+                    msg.role === "ai" ? (vue.openBlock(), vue.createElementBlock("view", {
                       key: 0,
-                      class: "ai-loading-wrap"
+                      class: "ai-avatar"
                     }, [
-                      vue.createElementVNode("view", { class: "wifi-loader" }, [
-                        (vue.openBlock(), vue.createElementBlock("svg", {
-                          class: "circle-outer",
-                          viewBox: "0 0 86 86"
-                        }, [
-                          vue.createElementVNode("circle", {
-                            class: "back",
-                            cx: "43",
-                            cy: "43",
-                            r: "40",
-                            fill: "none"
-                          }),
-                          vue.createElementVNode("circle", {
-                            class: "front",
-                            cx: "43",
-                            cy: "43",
-                            r: "40",
-                            fill: "none"
-                          })
-                        ])),
-                        (vue.openBlock(), vue.createElementBlock("svg", {
-                          class: "circle-middle",
-                          viewBox: "0 0 60 60"
-                        }, [
-                          vue.createElementVNode("circle", {
-                            class: "back",
-                            cx: "30",
-                            cy: "30",
-                            r: "27",
-                            fill: "none"
-                          }),
-                          vue.createElementVNode("circle", {
-                            class: "front",
-                            cx: "30",
-                            cy: "30",
-                            r: "27",
-                            fill: "none"
-                          })
-                        ])),
-                        (vue.openBlock(), vue.createElementBlock("svg", {
-                          class: "circle-inner",
-                          viewBox: "0 0 34 34"
-                        }, [
-                          vue.createElementVNode("circle", {
-                            class: "back",
-                            cx: "17",
-                            cy: "17",
-                            r: "14",
-                            fill: "none"
-                          }),
-                          vue.createElementVNode("circle", {
-                            class: "front",
-                            cx: "17",
-                            cy: "17",
-                            r: "14",
-                            fill: "none"
-                          })
-                        ])),
-                        vue.createElementVNode("view", {
-                          class: "text",
-                          "data-text": "loading"
-                        })
-                      ])
-                    ])) : msg.type === "text" ? (vue.openBlock(), vue.createElementBlock("view", { key: 1 }, [
-                      msg.title ? (vue.openBlock(), vue.createElementBlock(
-                        "text",
-                        {
-                          key: 0,
-                          class: "ai-hd"
-                        },
-                        vue.toDisplayString(msg.title),
-                        1
-                        /* TEXT */
-                      )) : vue.createCommentVNode("v-if", true),
-                      vue.createVNode(_component_markdown_content, {
-                        class: "ai-bd",
-                        content: msg.content
-                      }, null, 8, ["content"]),
-                      msg.tip ? (vue.openBlock(), vue.createElementBlock(
-                        "text",
-                        {
-                          key: 1,
-                          class: "ai-tip"
-                        },
-                        vue.toDisplayString(msg.tip),
-                        1
-                        /* TEXT */
-                      )) : vue.createCommentVNode("v-if", true)
+                      vue.createElementVNode("text", { style: { "font-size": "36rpx" } }, "🤖")
                     ])) : vue.createCommentVNode("v-if", true),
-                    msg.type === "plan" ? (vue.openBlock(), vue.createElementBlock("view", { key: 2 }, [
-                      vue.createElementVNode(
-                        "text",
-                        { class: "card-hd" },
-                        vue.toDisplayString(msg.content),
-                        1
-                        /* TEXT */
-                      ),
-                      (vue.openBlock(true), vue.createElementBlock(
-                        vue.Fragment,
-                        null,
-                        vue.renderList(msg.plans, (p) => {
-                          return vue.openBlock(), vue.createElementBlock("view", {
-                            class: "plan-row",
-                            key: p.name
-                          }, [
-                            vue.createElementVNode("view", { class: "plan-l" }, [
-                              vue.createElementVNode("text", { style: { "font-size": "22rpx" } }, "⏰"),
-                              vue.createElementVNode(
-                                "text",
-                                { class: "plan-nm" },
-                                vue.toDisplayString(p.name),
-                                1
-                                /* TEXT */
-                              )
-                            ]),
-                            vue.createElementVNode(
-                              "text",
-                              { class: "plan-tm" },
-                              vue.toDisplayString(p.time),
-                              1
-                              /* TEXT */
-                            )
-                          ]);
-                        }),
-                        128
-                        /* KEYED_FRAGMENT */
-                      )),
-                      vue.createElementVNode("view", {
-                        class: "link-row",
-                        onClick: $setup.goPlans
-                      }, [
-                        vue.createElementVNode("text", { class: "link-txt" }, "查看计划 >")
-                      ])
-                    ])) : vue.createCommentVNode("v-if", true),
-                    msg.type === "planProposal" ? (vue.openBlock(), vue.createElementBlock("view", {
-                      key: 3,
-                      class: "proposal-wrap"
+                    msg.role === "ai" ? (vue.openBlock(), vue.createElementBlock("view", {
+                      key: 1,
+                      class: "card-ai"
                     }, [
-                      msg.content ? (vue.openBlock(), vue.createBlock(_component_markdown_content, {
+                      msg.type === "loading" ? (vue.openBlock(), vue.createElementBlock("view", {
                         key: 0,
-                        class: "ai-bd proposal-intro",
-                        content: msg.content
-                      }, null, 8, ["content"])) : vue.createCommentVNode("v-if", true),
-                      msg.loading ? (vue.openBlock(), vue.createElementBlock("view", {
-                        key: 1,
-                        class: "proposal-loading"
+                        class: "ai-loading-wrap"
                       }, [
-                        vue.createElementVNode("text", { class: "proposal-loading-txt" }, "正在加载计划详情...")
-                      ])) : (vue.openBlock(), vue.createElementBlock(
-                        vue.Fragment,
-                        { key: 2 },
-                        [
-                          msg.status ? (vue.openBlock(), vue.createElementBlock(
-                            "view",
-                            {
-                              key: 0,
-                              class: vue.normalizeClass(["proposal-status-badge", "status-" + String(msg.status).toLowerCase()])
-                            },
-                            [
-                              vue.createElementVNode(
-                                "text",
-                                null,
-                                vue.toDisplayString($setup.proposalStatusText(msg.status)),
-                                1
-                                /* TEXT */
-                              )
-                            ],
-                            2
-                            /* CLASS */
-                          )) : vue.createCommentVNode("v-if", true),
-                          msg.detail ? (vue.openBlock(), vue.createElementBlock("view", {
+                        vue.createElementVNode("view", { class: "ai-reply-loader" }, [
+                          (vue.openBlock(), vue.createElementBlock("svg", {
+                            class: "circle-outer",
+                            viewBox: "0 0 86 86"
+                          }, [
+                            vue.createElementVNode("circle", {
+                              class: "back",
+                              cx: "43",
+                              cy: "43",
+                              r: "40",
+                              fill: "none"
+                            }),
+                            vue.createElementVNode("circle", {
+                              class: "front",
+                              cx: "43",
+                              cy: "43",
+                              r: "40",
+                              fill: "none"
+                            })
+                          ])),
+                          (vue.openBlock(), vue.createElementBlock("svg", {
+                            class: "circle-middle",
+                            viewBox: "0 0 60 60"
+                          }, [
+                            vue.createElementVNode("circle", {
+                              class: "back",
+                              cx: "30",
+                              cy: "30",
+                              r: "27",
+                              fill: "none"
+                            }),
+                            vue.createElementVNode("circle", {
+                              class: "front",
+                              cx: "30",
+                              cy: "30",
+                              r: "27",
+                              fill: "none"
+                            })
+                          ])),
+                          (vue.openBlock(), vue.createElementBlock("svg", {
+                            class: "circle-inner",
+                            viewBox: "0 0 34 34"
+                          }, [
+                            vue.createElementVNode("circle", {
+                              class: "back",
+                              cx: "17",
+                              cy: "17",
+                              r: "14",
+                              fill: "none"
+                            }),
+                            vue.createElementVNode("circle", {
+                              class: "front",
+                              cx: "17",
+                              cy: "17",
+                              r: "14",
+                              fill: "none"
+                            })
+                          ])),
+                          vue.createElementVNode("view", {
+                            class: "text",
+                            "data-text": "loading"
+                          })
+                        ])
+                      ])) : msg.type === "text" ? (vue.openBlock(), vue.createElementBlock("view", { key: 1 }, [
+                        msg.title ? (vue.openBlock(), vue.createElementBlock(
+                          "text",
+                          {
+                            key: 0,
+                            class: "ai-hd"
+                          },
+                          vue.toDisplayString(msg.title),
+                          1
+                          /* TEXT */
+                        )) : vue.createCommentVNode("v-if", true),
+                        vue.createVNode(_component_markdown_content, {
+                          class: "ai-bd",
+                          content: msg.content
+                        }, null, 8, ["content"]),
+                        msg.tip ? (vue.openBlock(), vue.createElementBlock(
+                          "text",
+                          {
                             key: 1,
-                            class: "proposal-body"
-                          }, [
-                            vue.createElementVNode(
-                              "text",
-                              { class: "proposal-title" },
-                              vue.toDisplayString(msg.detail.goalTitle),
-                              1
-                              /* TEXT */
-                            ),
-                            msg.detail.goalDescription ? (vue.openBlock(), vue.createElementBlock(
-                              "text",
-                              {
-                                key: 0,
-                                class: "proposal-desc"
-                              },
-                              vue.toDisplayString(msg.detail.goalDescription),
-                              1
-                              /* TEXT */
-                            )) : vue.createCommentVNode("v-if", true),
-                            vue.createElementVNode(
-                              "text",
-                              { class: "proposal-summary" },
-                              vue.toDisplayString(msg.detail.summary),
-                              1
-                              /* TEXT */
-                            ),
-                            vue.createElementVNode("text", { class: "proposal-meta" }, [
-                              vue.createTextVNode(
-                                " 📅 " + vue.toDisplayString($setup.formatPlanDate(msg.detail.startDate || msg.detail.days && msg.detail.days[0] && msg.detail.days[0].scheduledDate)) + " ",
-                                1
-                                /* TEXT */
-                              ),
-                              msg.detail.endDate ? (vue.openBlock(), vue.createElementBlock(
-                                "text",
-                                { key: 0 },
-                                " — " + vue.toDisplayString($setup.formatPlanDate(msg.detail.endDate)),
-                                1
-                                /* TEXT */
-                              )) : vue.createCommentVNode("v-if", true),
-                              vue.createTextVNode(
-                                " · ⏰ 每日 " + vue.toDisplayString(msg.detail.dailyReminderTime || "08:00"),
-                                1
-                                /* TEXT */
-                              )
-                            ]),
-                            (vue.openBlock(true), vue.createElementBlock(
-                              vue.Fragment,
-                              null,
-                              vue.renderList(msg.detail.days || [], (d) => {
-                                return vue.openBlock(), vue.createElementBlock("view", {
-                                  class: "proposal-day",
-                                  key: d.dayIndex
-                                }, [
-                                  vue.createElementVNode("view", { class: "day-hd" }, [
-                                    vue.createElementVNode(
-                                      "text",
-                                      { class: "day-tag" },
-                                      "第" + vue.toDisplayString(d.dayIndex) + "天",
-                                      1
-                                      /* TEXT */
-                                    ),
-                                    vue.createElementVNode(
-                                      "text",
-                                      { class: "day-date" },
-                                      vue.toDisplayString($setup.formatPlanDate(d.scheduledDate)),
-                                      1
-                                      /* TEXT */
-                                    ),
-                                    vue.createElementVNode(
-                                      "text",
-                                      { class: "day-mins" },
-                                      vue.toDisplayString($setup.formatMinutes(d.estimatedMinutes)),
-                                      1
-                                      /* TEXT */
-                                    )
-                                  ]),
-                                  vue.createElementVNode(
-                                    "text",
-                                    { class: "day-title" },
-                                    vue.toDisplayString(d.title),
-                                    1
-                                    /* TEXT */
-                                  ),
-                                  d.description ? (vue.openBlock(), vue.createElementBlock(
-                                    "text",
-                                    {
-                                      key: 0,
-                                      class: "day-desc"
-                                    },
-                                    vue.toDisplayString(d.description),
-                                    1
-                                    /* TEXT */
-                                  )) : vue.createCommentVNode("v-if", true)
-                                ]);
-                              }),
-                              128
-                              /* KEYED_FRAGMENT */
-                            )),
-                            msg.detail.expiresAt ? (vue.openBlock(), vue.createElementBlock(
-                              "text",
-                              {
-                                key: 1,
-                                class: "proposal-expire"
-                              },
-                              " 草案有效期至 " + vue.toDisplayString($setup.formatPlanExpire(msg.detail.expiresAt)),
-                              1
-                              /* TEXT */
-                            )) : vue.createCommentVNode("v-if", true)
-                          ])) : vue.createCommentVNode("v-if", true),
-                          !msg.resolved && msg.status === "PENDING" && msg.detail ? (vue.openBlock(), vue.createElementBlock("view", {
-                            key: 2,
-                            class: "proposal-actions"
-                          }, [
-                            vue.createElementVNode("view", {
-                              class: vue.normalizeClass(["btn-proposal-reject", { disabled: msg.acting }]),
-                              onClick: ($event) => $setup.onRejectProposal(msg)
-                            }, [
-                              vue.createElementVNode("text", null, "拒绝")
-                            ], 10, ["onClick"]),
-                            vue.createElementVNode("view", {
-                              class: vue.normalizeClass(["btn-proposal-confirm", { disabled: msg.acting }]),
-                              onClick: ($event) => $setup.onConfirmProposal(msg)
-                            }, [
-                              vue.createElementVNode(
-                                "text",
-                                null,
-                                vue.toDisplayString(msg.acting === "confirm" ? "确认中..." : "确认计划"),
-                                1
-                                /* TEXT */
-                              )
-                            ], 10, ["onClick"])
-                          ])) : msg.resolved ? (vue.openBlock(), vue.createElementBlock("view", {
-                            key: 3,
-                            class: "proposal-done"
-                          }, [
-                            vue.createElementVNode(
-                              "text",
-                              null,
-                              vue.toDisplayString(msg.resultMessage),
-                              1
-                              /* TEXT */
-                            )
-                          ])) : vue.createCommentVNode("v-if", true)
-                        ],
-                        64
-                        /* STABLE_FRAGMENT */
-                      ))
-                    ])) : vue.createCommentVNode("v-if", true),
-                    msg.type === "recommend" ? (vue.openBlock(), vue.createElementBlock("view", { key: 4 }, [
-                      vue.createElementVNode(
-                        "text",
-                        { class: "card-hd" },
-                        vue.toDisplayString(msg.content),
-                        1
-                        /* TEXT */
-                      ),
-                      (vue.openBlock(true), vue.createElementBlock(
-                        vue.Fragment,
-                        null,
-                        vue.renderList(msg.items, (r, ri) => {
-                          return vue.openBlock(), vue.createElementBlock("view", {
-                            class: "rec-row",
-                            key: ri
-                          }, [
-                            vue.createElementVNode(
-                              "text",
-                              { class: "rec-txt" },
-                              vue.toDisplayString(r),
-                              1
-                              /* TEXT */
-                            )
-                          ]);
-                        }),
-                        128
-                        /* KEYED_FRAGMENT */
-                      ))
-                    ])) : vue.createCommentVNode("v-if", true),
-                    msg.type === "stats" ? (vue.openBlock(), vue.createElementBlock("view", { key: 5 }, [
-                      vue.createElementVNode(
-                        "text",
-                        { class: "card-hd" },
-                        vue.toDisplayString(msg.content),
-                        1
-                        /* TEXT */
-                      ),
-                      vue.createElementVNode("view", { class: "stats-grid" }, [
+                            class: "ai-tip"
+                          },
+                          vue.toDisplayString(msg.tip),
+                          1
+                          /* TEXT */
+                        )) : vue.createCommentVNode("v-if", true)
+                      ])) : vue.createCommentVNode("v-if", true),
+                      msg.type === "plan" ? (vue.openBlock(), vue.createElementBlock("view", { key: 2 }, [
+                        vue.createElementVNode(
+                          "text",
+                          { class: "card-hd" },
+                          vue.toDisplayString(msg.content),
+                          1
+                          /* TEXT */
+                        ),
                         (vue.openBlock(true), vue.createElementBlock(
                           vue.Fragment,
                           null,
-                          vue.renderList(msg.stats, (s, si) => {
+                          vue.renderList(msg.plans, (p) => {
                             return vue.openBlock(), vue.createElementBlock("view", {
-                              class: "stat-item",
-                              key: si
+                              class: "plan-row",
+                              key: p.name
+                            }, [
+                              vue.createElementVNode("view", { class: "plan-l" }, [
+                                vue.createElementVNode("text", { style: { "font-size": "22rpx" } }, "⏰"),
+                                vue.createElementVNode(
+                                  "text",
+                                  { class: "plan-nm" },
+                                  vue.toDisplayString(p.name),
+                                  1
+                                  /* TEXT */
+                                )
+                              ]),
+                              vue.createElementVNode(
+                                "text",
+                                { class: "plan-tm" },
+                                vue.toDisplayString(p.time),
+                                1
+                                /* TEXT */
+                              )
+                            ]);
+                          }),
+                          128
+                          /* KEYED_FRAGMENT */
+                        )),
+                        vue.createElementVNode("view", {
+                          class: "link-row",
+                          onClick: $setup.goPlans
+                        }, [
+                          vue.createElementVNode("text", { class: "link-txt" }, "查看计划 >")
+                        ])
+                      ])) : vue.createCommentVNode("v-if", true),
+                      msg.type === "planProposal" ? (vue.openBlock(), vue.createElementBlock("view", {
+                        key: 3,
+                        class: "proposal-wrap"
+                      }, [
+                        msg.content ? (vue.openBlock(), vue.createBlock(_component_markdown_content, {
+                          key: 0,
+                          class: "ai-bd proposal-intro",
+                          content: msg.content
+                        }, null, 8, ["content"])) : vue.createCommentVNode("v-if", true),
+                        msg.loading ? (vue.openBlock(), vue.createElementBlock("view", {
+                          key: 1,
+                          class: "proposal-loading"
+                        }, [
+                          vue.createElementVNode("text", { class: "proposal-loading-txt" }, "正在加载计划详情...")
+                        ])) : (vue.openBlock(), vue.createElementBlock(
+                          vue.Fragment,
+                          { key: 2 },
+                          [
+                            msg.status ? (vue.openBlock(), vue.createElementBlock(
+                              "view",
+                              {
+                                key: 0,
+                                class: vue.normalizeClass(["proposal-status-badge", "status-" + String(msg.status).toLowerCase()])
+                              },
+                              [
+                                vue.createElementVNode(
+                                  "text",
+                                  null,
+                                  vue.toDisplayString($setup.proposalStatusText(msg.status)),
+                                  1
+                                  /* TEXT */
+                                )
+                              ],
+                              2
+                              /* CLASS */
+                            )) : vue.createCommentVNode("v-if", true),
+                            msg.detail ? (vue.openBlock(), vue.createElementBlock("view", {
+                              key: 1,
+                              class: "proposal-body"
                             }, [
                               vue.createElementVNode(
                                 "text",
-                                {
-                                  class: "stat-value",
-                                  style: vue.normalizeStyle({ color: s.color })
-                                },
-                                vue.toDisplayString(s.value),
-                                5
-                                /* TEXT, STYLE */
+                                { class: "proposal-title" },
+                                vue.toDisplayString(msg.detail.goalTitle),
+                                1
+                                /* TEXT */
                               ),
+                              msg.detail.goalDescription ? (vue.openBlock(), vue.createElementBlock(
+                                "text",
+                                {
+                                  key: 0,
+                                  class: "proposal-desc"
+                                },
+                                vue.toDisplayString(msg.detail.goalDescription),
+                                1
+                                /* TEXT */
+                              )) : vue.createCommentVNode("v-if", true),
                               vue.createElementVNode(
                                 "text",
-                                { class: "stat-label" },
-                                vue.toDisplayString(s.label),
+                                { class: "proposal-summary" },
+                                vue.toDisplayString(msg.detail.summary),
+                                1
+                                /* TEXT */
+                              ),
+                              vue.createElementVNode("text", { class: "proposal-meta" }, [
+                                vue.createTextVNode(
+                                  " 📅 " + vue.toDisplayString($setup.formatPlanDate(msg.detail.startDate || msg.detail.days && msg.detail.days[0] && msg.detail.days[0].scheduledDate)) + " ",
+                                  1
+                                  /* TEXT */
+                                ),
+                                msg.detail.endDate ? (vue.openBlock(), vue.createElementBlock(
+                                  "text",
+                                  { key: 0 },
+                                  " — " + vue.toDisplayString($setup.formatPlanDate(msg.detail.endDate)),
+                                  1
+                                  /* TEXT */
+                                )) : vue.createCommentVNode("v-if", true),
+                                vue.createTextVNode(
+                                  " · ⏰ 每日 " + vue.toDisplayString(msg.detail.dailyReminderTime || "08:00"),
+                                  1
+                                  /* TEXT */
+                                )
+                              ]),
+                              (vue.openBlock(true), vue.createElementBlock(
+                                vue.Fragment,
+                                null,
+                                vue.renderList(msg.detail.days || [], (d) => {
+                                  return vue.openBlock(), vue.createElementBlock("view", {
+                                    class: "proposal-day",
+                                    key: d.dayIndex
+                                  }, [
+                                    vue.createElementVNode("view", { class: "day-hd" }, [
+                                      vue.createElementVNode(
+                                        "text",
+                                        { class: "day-tag" },
+                                        "第" + vue.toDisplayString(d.dayIndex) + "天",
+                                        1
+                                        /* TEXT */
+                                      ),
+                                      vue.createElementVNode(
+                                        "text",
+                                        { class: "day-date" },
+                                        vue.toDisplayString($setup.formatPlanDate(d.scheduledDate)),
+                                        1
+                                        /* TEXT */
+                                      ),
+                                      vue.createElementVNode(
+                                        "text",
+                                        { class: "day-mins" },
+                                        vue.toDisplayString($setup.formatMinutes(d.estimatedMinutes)),
+                                        1
+                                        /* TEXT */
+                                      )
+                                    ]),
+                                    vue.createElementVNode(
+                                      "text",
+                                      { class: "day-title" },
+                                      vue.toDisplayString(d.title),
+                                      1
+                                      /* TEXT */
+                                    ),
+                                    d.description ? (vue.openBlock(), vue.createElementBlock(
+                                      "text",
+                                      {
+                                        key: 0,
+                                        class: "day-desc"
+                                      },
+                                      vue.toDisplayString(d.description),
+                                      1
+                                      /* TEXT */
+                                    )) : vue.createCommentVNode("v-if", true)
+                                  ]);
+                                }),
+                                128
+                                /* KEYED_FRAGMENT */
+                              )),
+                              msg.detail.expiresAt ? (vue.openBlock(), vue.createElementBlock(
+                                "text",
+                                {
+                                  key: 1,
+                                  class: "proposal-expire"
+                                },
+                                " 草案有效期至 " + vue.toDisplayString($setup.formatPlanExpire(msg.detail.expiresAt)),
+                                1
+                                /* TEXT */
+                              )) : vue.createCommentVNode("v-if", true)
+                            ])) : vue.createCommentVNode("v-if", true),
+                            !msg.resolved && msg.status === "PENDING" && msg.detail ? (vue.openBlock(), vue.createElementBlock("view", {
+                              key: 2,
+                              class: "proposal-actions"
+                            }, [
+                              vue.createElementVNode("view", {
+                                class: vue.normalizeClass(["btn-proposal-reject", { disabled: msg.acting }]),
+                                onClick: ($event) => $setup.onRejectProposal(msg)
+                              }, [
+                                vue.createElementVNode("text", null, "拒绝")
+                              ], 10, ["onClick"]),
+                              vue.createElementVNode("view", {
+                                class: vue.normalizeClass(["btn-proposal-confirm", { disabled: msg.acting }]),
+                                onClick: ($event) => $setup.onConfirmProposal(msg)
+                              }, [
+                                vue.createElementVNode(
+                                  "text",
+                                  null,
+                                  vue.toDisplayString(msg.acting === "confirm" ? "确认中..." : "确认计划"),
+                                  1
+                                  /* TEXT */
+                                )
+                              ], 10, ["onClick"])
+                            ])) : msg.resolved ? (vue.openBlock(), vue.createElementBlock("view", {
+                              key: 3,
+                              class: "proposal-done"
+                            }, [
+                              vue.createElementVNode(
+                                "text",
+                                null,
+                                vue.toDisplayString(msg.resultMessage),
+                                1
+                                /* TEXT */
+                              )
+                            ])) : vue.createCommentVNode("v-if", true)
+                          ],
+                          64
+                          /* STABLE_FRAGMENT */
+                        ))
+                      ])) : vue.createCommentVNode("v-if", true),
+                      msg.type === "recommend" ? (vue.openBlock(), vue.createElementBlock("view", { key: 4 }, [
+                        vue.createElementVNode(
+                          "text",
+                          { class: "card-hd" },
+                          vue.toDisplayString(msg.content),
+                          1
+                          /* TEXT */
+                        ),
+                        (vue.openBlock(true), vue.createElementBlock(
+                          vue.Fragment,
+                          null,
+                          vue.renderList(msg.items, (r, ri) => {
+                            return vue.openBlock(), vue.createElementBlock("view", {
+                              class: "rec-row",
+                              key: ri
+                            }, [
+                              vue.createElementVNode(
+                                "text",
+                                { class: "rec-txt" },
+                                vue.toDisplayString(r),
                                 1
                                 /* TEXT */
                               )
@@ -2574,339 +2556,336 @@ if (uni.restoreGlobal) {
                           128
                           /* KEYED_FRAGMENT */
                         ))
-                      ])
-                    ])) : vue.createCommentVNode("v-if", true)
-                  ])) : vue.createCommentVNode("v-if", true),
-                  msg.role === "user" ? (vue.openBlock(), vue.createElementBlock("view", {
-                    key: 2,
-                    class: "card-user"
-                  }, [
-                    msg.isVoice && msg.voiceUrl ? (vue.openBlock(), vue.createElementBlock("view", {
-                      key: 0,
-                      class: "voice-bubble",
-                      onClick: ($event) => $setup.playVoice(msg)
+                      ])) : vue.createCommentVNode("v-if", true),
+                      msg.type === "stats" ? (vue.openBlock(), vue.createElementBlock("view", { key: 5 }, [
+                        vue.createElementVNode(
+                          "text",
+                          { class: "card-hd" },
+                          vue.toDisplayString(msg.content),
+                          1
+                          /* TEXT */
+                        ),
+                        vue.createElementVNode("view", { class: "stats-grid" }, [
+                          (vue.openBlock(true), vue.createElementBlock(
+                            vue.Fragment,
+                            null,
+                            vue.renderList(msg.stats, (s, si) => {
+                              return vue.openBlock(), vue.createElementBlock("view", {
+                                class: "stat-item",
+                                key: si
+                              }, [
+                                vue.createElementVNode(
+                                  "text",
+                                  {
+                                    class: "stat-value",
+                                    style: vue.normalizeStyle({ color: s.color })
+                                  },
+                                  vue.toDisplayString(s.value),
+                                  5
+                                  /* TEXT, STYLE */
+                                ),
+                                vue.createElementVNode(
+                                  "text",
+                                  { class: "stat-label" },
+                                  vue.toDisplayString(s.label),
+                                  1
+                                  /* TEXT */
+                                )
+                              ]);
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ])
+                      ])) : vue.createCommentVNode("v-if", true)
+                    ])) : vue.createCommentVNode("v-if", true),
+                    msg.role === "user" ? (vue.openBlock(), vue.createElementBlock("view", {
+                      key: 2,
+                      class: "card-user"
                     }, [
-                      vue.createElementVNode(
+                      msg.isVoice && msg.voiceUrl ? (vue.openBlock(), vue.createElementBlock("view", {
+                        key: 0,
+                        class: "voice-bubble",
+                        onClick: ($event) => $setup.playVoice(msg)
+                      }, [
+                        vue.createElementVNode(
+                          "text",
+                          { class: "voice-play-icon" },
+                          vue.toDisplayString($setup.isPlayingVoice(msg) ? "⏸" : "▶"),
+                          1
+                          /* TEXT */
+                        ),
+                        vue.createElementVNode("view", { class: "voice-wave" }, [
+                          (vue.openBlock(), vue.createElementBlock(
+                            vue.Fragment,
+                            null,
+                            vue.renderList(4, (n) => {
+                              return vue.createElementVNode(
+                                "view",
+                                {
+                                  class: vue.normalizeClass(["wave-bar", { active: $setup.isPlayingVoice(msg) }]),
+                                  key: n
+                                },
+                                null,
+                                2
+                                /* CLASS */
+                              );
+                            }),
+                            64
+                            /* STABLE_FRAGMENT */
+                          ))
+                        ]),
+                        vue.createElementVNode(
+                          "text",
+                          { class: "voice-text" },
+                          vue.toDisplayString($setup.formatVoiceLabel(msg)),
+                          1
+                          /* TEXT */
+                        )
+                      ], 8, ["onClick"])) : (vue.openBlock(), vue.createElementBlock(
                         "text",
-                        { class: "voice-play-icon" },
-                        vue.toDisplayString($setup.isPlayingVoice(msg) ? "⏸" : "▶"),
+                        {
+                          key: 1,
+                          class: "user-txt"
+                        },
+                        vue.toDisplayString(msg.content),
                         1
                         /* TEXT */
-                      ),
-                      vue.createElementVNode("view", { class: "voice-wave" }, [
-                        (vue.openBlock(), vue.createElementBlock(
-                          vue.Fragment,
-                          null,
-                          vue.renderList(4, (n) => {
-                            return vue.createElementVNode(
-                              "view",
-                              {
-                                class: vue.normalizeClass(["wave-bar", { active: $setup.isPlayingVoice(msg) }]),
-                                key: n
-                              },
-                              null,
-                              2
-                              /* CLASS */
-                            );
-                          }),
-                          64
-                          /* STABLE_FRAGMENT */
-                        ))
-                      ]),
-                      vue.createElementVNode(
-                        "text",
-                        { class: "voice-text" },
-                        vue.toDisplayString($setup.formatVoiceLabel(msg)),
-                        1
-                        /* TEXT */
-                      )
-                    ], 8, ["onClick"])) : (vue.openBlock(), vue.createElementBlock(
-                      "text",
-                      {
+                      ))
+                    ])) : vue.createCommentVNode("v-if", true),
+                    msg.role === "user" ? (vue.openBlock(), vue.createElementBlock("view", {
+                      key: 3,
+                      class: "user-avatar"
+                    }, [
+                      $setup.userAvatar ? (vue.openBlock(), vue.createElementBlock("image", {
+                        key: 0,
+                        src: $setup.userAvatar,
+                        class: "user-avatar-img",
+                        mode: "aspectFill"
+                      }, null, 8, ["src"])) : (vue.openBlock(), vue.createElementBlock("text", {
                         key: 1,
-                        class: "user-txt"
-                      },
-                      vue.toDisplayString(msg.content),
-                      1
-                      /* TEXT */
-                    ))
-                  ])) : vue.createCommentVNode("v-if", true),
-                  msg.role === "user" ? (vue.openBlock(), vue.createElementBlock("view", {
-                    key: 3,
-                    class: "user-avatar"
-                  }, [
-                    $setup.userAvatar ? (vue.openBlock(), vue.createElementBlock("image", {
-                      key: 0,
-                      src: $setup.userAvatar,
-                      class: "user-avatar-img",
-                      mode: "aspectFill"
-                    }, null, 8, ["src"])) : (vue.openBlock(), vue.createElementBlock("text", {
-                      key: 1,
-                      style: { "font-size": "36rpx", "color": "#4facfe" }
-                    }, "👤"))
-                  ])) : vue.createCommentVNode("v-if", true)
-                ],
-                6
-                /* CLASS, STYLE */
-              );
-            }),
-            128
-            /* KEYED_FRAGMENT */
-          ))
-        ])
-      ], 8, ["scroll-top"]),
-      vue.createElementVNode(
-        "view",
-        {
-          class: vue.normalizeClass(["func-bar", { show: $setup.loaded }])
-        },
-        [
-          vue.createElementVNode("view", {
-            class: "func-pill",
-            onClick: _cache[0] || (_cache[0] = ($event) => $setup.onFeature("plan"))
-          }, [
-            vue.createElementVNode("text", null, " 录入计划")
-          ]),
-          vue.createElementVNode("view", {
-            class: "func-pill",
-            onClick: _cache[1] || (_cache[1] = ($event) => $setup.onFeature("recommend"))
-          }, [
-            vue.createElementVNode("text", null, " 智能推荐")
-          ]),
-          vue.createElementVNode("view", {
-            class: "func-pill",
-            onClick: _cache[2] || (_cache[2] = ($event) => $setup.onFeature("calendar"))
-          }, [
-            vue.createElementVNode("text", null, " 日程视图")
-          ]),
-          vue.createElementVNode("view", {
-            class: "func-pill",
-            onClick: _cache[3] || (_cache[3] = ($event) => $setup.onFeature("stats"))
-          }, [
-            vue.createElementVNode("text", null, " 数据统计")
-          ])
-        ],
-        2
-        /* CLASS */
-      ),
-      vue.createElementVNode("view", { class: "input-card" }, [
-        $setup.inputMode === "text" ? (vue.openBlock(), vue.createElementBlock("view", { key: 0 }, [
-          vue.withDirectives(vue.createElementVNode("input", {
-            class: "inp",
-            "onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => $setup.inputText = $event),
-            type: "text",
-            placeholder: "输入计划...",
-            "placeholder-class": "inp-ph",
-            "confirm-type": "send",
-            focus: $setup.inputFocus,
-            onConfirm: $setup.onSend,
-            onBlur: _cache[5] || (_cache[5] = ($event) => $setup.inputFocus = false),
-            onCompositionstart: _cache[6] || (_cache[6] = ($event) => $setup.composing = true),
-            onCompositionend: _cache[7] || (_cache[7] = ($event) => $setup.composing = false)
-          }, null, 40, ["focus"]), [
-            [vue.vModelText, $setup.inputText]
-          ])
-        ])) : (vue.openBlock(), vue.createElementBlock(
-          "view",
-          {
-            key: 1,
-            class: vue.normalizeClass(["voice-area", { recording: $setup.isRecording }]),
-            onTouchstart: vue.withModifiers($setup.onVoiceTouchStart, ["stop"]),
-            onTouchend: vue.withModifiers($setup.onVoiceTouchEnd, ["stop"]),
-            onTouchcancel: vue.withModifiers($setup.onVoiceTouchEnd, ["stop"]),
-            onTouchmove: _cache[8] || (_cache[8] = vue.withModifiers(() => {
-            }, ["stop"]))
-          },
-          [
-            vue.createElementVNode(
-              "text",
-              {
-                class: vue.normalizeClass(["voice-tip", { recording: $setup.isRecording }])
-              },
-              vue.toDisplayString($setup.isRecording ? "松开 结束" : "按住 说话"),
-              3
-              /* TEXT, CLASS */
-            )
-          ],
-          34
-          /* CLASS, NEED_HYDRATION */
-        )),
-        vue.createElementVNode("view", { class: "inp-tools" }, [
-          vue.createElementVNode("view", {
-            class: "inp-btn",
-            onClick: $setup.toggleMode
-          }, [
-            $setup.inputMode === "text" ? (vue.openBlock(), vue.createElementBlock("text", {
-              key: 0,
-              style: { "font-size": "28rpx", "color": "#bbb" }
-            }, "⌨")) : (vue.openBlock(), vue.createElementBlock("text", {
-              key: 1,
-              style: { "font-size": "28rpx", "color": "#bbb" }
-            }, "🎤"))
-          ]),
-          $setup.inputMode === "text" ? (vue.openBlock(), vue.createElementBlock(
-            "view",
-            {
-              key: 0,
-              class: vue.normalizeClass(["inp-send", { active: $setup.inputText.length > 0 }]),
-              onClick: $setup.onSend
-            },
-            [
-              vue.createElementVNode("text", { style: { "font-size": "28rpx", "color": "#fff" } }, "发送")
-            ],
-            2
-            /* CLASS */
-          )) : (vue.openBlock(), vue.createElementBlock(
-            "view",
-            {
-              key: 1,
-              class: vue.normalizeClass(["inp-mic", { pressed: $setup.isRecording }]),
-              onTouchstart: vue.withModifiers($setup.onVoiceTouchStart, ["stop"]),
-              onTouchend: vue.withModifiers($setup.onVoiceTouchEnd, ["stop"]),
-              onTouchcancel: vue.withModifiers($setup.onVoiceTouchEnd, ["stop"]),
-              onTouchmove: _cache[9] || (_cache[9] = vue.withModifiers(() => {
-              }, ["stop"]))
-            },
-            [
-              vue.createElementVNode("text", { style: { "font-size": "28rpx", "color": "#fff" } }, "🎤")
-            ],
-            34
-            /* CLASS, NEED_HYDRATION */
-          )),
-          vue.createElementVNode("view", {
-            class: "inp-btn",
-            onClick: $setup.showAddMenu
-          }, [
-            vue.createElementVNode("text", { style: { "font-size": "36rpx", "color": "#bbb" } }, "＋")
-          ])
-        ])
-      ]),
-      $setup.historyVisible ? (vue.openBlock(), vue.createElementBlock("view", {
-        key: 0,
-        class: "history-mask",
-        onClick: _cache[11] || (_cache[11] = ($event) => $setup.historyVisible = false)
-      }, [
-        vue.createElementVNode("view", {
-          class: "history-panel",
-          onClick: _cache[10] || (_cache[10] = vue.withModifiers(() => {
-          }, ["stop"]))
-        }, [
-          vue.createElementVNode("view", { class: "history-hd" }, [
-            vue.createElementVNode("text", { class: "history-title" }, "对话历史"),
-            vue.createElementVNode("view", {
-              class: "history-new",
-              onClick: $setup.createNewSession
-            }, [
-              vue.createElementVNode("text", { class: "history-new-txt" }, "＋ 新对话")
-            ])
-          ]),
-          vue.createElementVNode("scroll-view", {
-            class: "history-scroll",
-            "scroll-y": "",
-            "show-scrollbar": false,
-            "refresher-enabled": true,
-            "refresher-triggered": $setup.sessionsRefreshing,
-            onRefresherrefresh: $setup.onSessionsRefresh,
-            onScrolltolower: $setup.loadMoreSessions
-          }, [
-            $setup.sessionList.length === 0 && !$setup.loadingSessions ? (vue.openBlock(), vue.createElementBlock("view", {
-              key: 0,
-              class: "history-empty"
-            }, [
-              vue.createElementVNode("text", { class: "history-empty-txt" }, "暂无历史对话")
-            ])) : vue.createCommentVNode("v-if", true),
-            (vue.openBlock(true), vue.createElementBlock(
-              vue.Fragment,
-              null,
-              vue.renderList($setup.sessionList, (s) => {
-                return vue.openBlock(), vue.createElementBlock("view", {
-                  key: s.id,
-                  class: vue.normalizeClass(["history-item", { active: String(s.id) === String($setup.sessionId) }]),
-                  onClick: ($event) => $setup.loadSession(s.id)
-                }, [
-                  vue.createElementVNode(
-                    "text",
-                    { class: "history-item-title" },
-                    vue.toDisplayString(s.title || "新对话"),
-                    1
-                    /* TEXT */
-                  ),
-                  vue.createElementVNode("text", { class: "history-item-meta" }, [
-                    vue.createTextVNode(
-                      vue.toDisplayString($setup.formatSessionTime(s.updatedAt)) + " ",
-                      1
-                      /* TEXT */
-                    ),
-                    $setup.isSessionCached(s.id) ? (vue.openBlock(), vue.createElementBlock("text", {
-                      key: 0,
-                      class: "history-local"
-                    }, " · 本地")) : vue.createCommentVNode("v-if", true)
-                  ])
-                ], 10, ["onClick"]);
+                        style: { "font-size": "36rpx", "color": "#4facfe" }
+                      }, "👤"))
+                    ])) : vue.createCommentVNode("v-if", true)
+                  ],
+                  6
+                  /* CLASS, STYLE */
+                );
               }),
               128
               /* KEYED_FRAGMENT */
-            )),
-            $setup.loadingSessions ? (vue.openBlock(), vue.createElementBlock("view", {
-              key: 1,
-              class: "history-loading"
-            }, [
-              vue.createElementVNode("text", { class: "history-loading-txt" }, "加载中...")
-            ])) : !$setup.sessionsHasNext && $setup.sessionList.length > 0 ? (vue.openBlock(), vue.createElementBlock("view", {
-              key: 2,
-              class: "history-loading"
-            }, [
-              vue.createElementVNode("text", { class: "history-loading-txt" }, "没有更多了")
-            ])) : vue.createCommentVNode("v-if", true)
-          ], 40, ["refresher-triggered"])
-        ])
-      ])) : vue.createCommentVNode("v-if", true),
-      $setup.addVisible ? (vue.openBlock(), vue.createElementBlock("view", {
-        key: 1,
-        class: "add-mask",
-        onClick: _cache[13] || (_cache[13] = ($event) => $setup.addVisible = false)
-      }, [
-        vue.createElementVNode("view", {
-          class: "add-panel",
-          onClick: _cache[12] || (_cache[12] = vue.withModifiers(() => {
-          }, ["stop"]))
-        }, [
-          (vue.openBlock(), vue.createElementBlock(
-            vue.Fragment,
-            null,
-            vue.renderList($setup.addOptions, (a) => {
-              return vue.createElementVNode("view", {
-                class: "add-item",
-                key: a.key,
-                onClick: ($event) => $setup.onAdd(a.key)
-              }, [
-                vue.createElementVNode(
-                  "view",
-                  {
-                    class: "add-icon-box",
-                    style: vue.normalizeStyle({ background: a.bg })
-                  },
-                  [
-                    vue.createElementVNode("text", { style: { "font-size": "36rpx", "color": "#7b6df0" } }, "🖼️")
-                  ],
-                  4
-                  /* STYLE */
-                ),
+            ))
+          ])
+        ], 8, ["scroll-top"]),
+        vue.createElementVNode("view", { class: "input-card" }, [
+          vue.createElementVNode("view", { class: "input-row" }, [
+            $setup.inputMode === "text" ? vue.withDirectives((vue.openBlock(), vue.createElementBlock("input", {
+              key: 0,
+              class: "inp",
+              "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => $setup.inputText = $event),
+              type: "text",
+              placeholder: "输入计划...",
+              "placeholder-class": "inp-ph",
+              "confirm-type": "send",
+              "adjust-position": false,
+              "cursor-spacing": 24,
+              focus: $setup.inputFocus,
+              onConfirm: $setup.onSend,
+              onFocus: $setup.onInputFocus,
+              onBlur: $setup.onInputBlur,
+              onCompositionstart: _cache[1] || (_cache[1] = ($event) => $setup.composing = true),
+              onCompositionend: _cache[2] || (_cache[2] = ($event) => $setup.composing = false)
+            }, null, 40, ["focus"])), [
+              [vue.vModelText, $setup.inputText]
+            ]) : (vue.openBlock(), vue.createElementBlock(
+              "view",
+              {
+                key: 1,
+                class: vue.normalizeClass(["voice-area", { recording: $setup.isRecording }]),
+                onTouchstart: vue.withModifiers($setup.onVoiceTouchStart, ["stop"]),
+                onTouchend: vue.withModifiers($setup.onVoiceTouchEnd, ["stop"]),
+                onTouchcancel: vue.withModifiers($setup.onVoiceTouchEnd, ["stop"]),
+                onTouchmove: _cache[3] || (_cache[3] = vue.withModifiers(() => {
+                }, ["stop"]))
+              },
+              [
                 vue.createElementVNode(
                   "text",
-                  { class: "add-label" },
-                  vue.toDisplayString(a.label),
-                  1
-                  /* TEXT */
+                  {
+                    class: vue.normalizeClass(["voice-tip", { recording: $setup.isRecording }])
+                  },
+                  vue.toDisplayString($setup.isRecording ? "松开 结束" : "按住 说话"),
+                  3
+                  /* TEXT, CLASS */
                 )
-              ], 8, ["onClick"]);
-            }),
-            64
-            /* STABLE_FRAGMENT */
-          ))
-        ])
-      ])) : vue.createCommentVNode("v-if", true)
-    ]);
+              ],
+              34
+              /* CLASS, NEED_HYDRATION */
+            )),
+            vue.createElementVNode("view", { class: "input-actions" }, [
+              vue.createElementVNode("view", {
+                class: "inp-btn",
+                onClick: $setup.toggleMode
+              }, [
+                $setup.inputMode === "text" ? (vue.openBlock(), vue.createElementBlock("text", {
+                  key: 0,
+                  class: "inp-btn-icon"
+                }, "🎤")) : (vue.openBlock(), vue.createElementBlock("text", {
+                  key: 1,
+                  class: "inp-btn-icon"
+                }, "⌨"))
+              ]),
+              $setup.inputMode === "text" ? (vue.openBlock(), vue.createElementBlock(
+                "view",
+                {
+                  key: 0,
+                  class: vue.normalizeClass(["inp-send", { active: $setup.inputText.length > 0 }]),
+                  onClick: $setup.onSend
+                },
+                [
+                  vue.createElementVNode("text", { class: "inp-send-txt" }, "发送")
+                ],
+                2
+                /* CLASS */
+              )) : vue.createCommentVNode("v-if", true),
+              vue.createElementVNode("view", {
+                class: "inp-btn",
+                onClick: $setup.showAddMenu
+              }, [
+                vue.createElementVNode("text", { class: "inp-btn-icon inp-btn-plus" }, "＋")
+              ])
+            ])
+          ])
+        ]),
+        $setup.historyVisible ? (vue.openBlock(), vue.createElementBlock("view", {
+          key: 0,
+          class: "history-mask",
+          onClick: _cache[5] || (_cache[5] = ($event) => $setup.historyVisible = false)
+        }, [
+          vue.createElementVNode("view", {
+            class: "history-panel",
+            onClick: _cache[4] || (_cache[4] = vue.withModifiers(() => {
+            }, ["stop"]))
+          }, [
+            vue.createElementVNode("view", { class: "history-hd" }, [
+              vue.createElementVNode("text", { class: "history-title" }, "对话历史"),
+              vue.createElementVNode("view", {
+                class: "history-new",
+                onClick: $setup.createNewSession
+              }, [
+                vue.createElementVNode("text", { class: "history-new-txt" }, "＋ 新对话")
+              ])
+            ]),
+            vue.createElementVNode("scroll-view", {
+              class: "history-scroll",
+              "scroll-y": "",
+              "show-scrollbar": false,
+              "refresher-enabled": true,
+              "refresher-triggered": $setup.sessionsRefreshing,
+              onRefresherrefresh: $setup.onSessionsRefresh,
+              onScrolltolower: $setup.loadMoreSessions
+            }, [
+              $setup.sessionList.length === 0 && !$setup.loadingSessions ? (vue.openBlock(), vue.createElementBlock("view", {
+                key: 0,
+                class: "history-empty"
+              }, [
+                vue.createElementVNode("text", { class: "history-empty-txt" }, "暂无历史对话")
+              ])) : vue.createCommentVNode("v-if", true),
+              (vue.openBlock(true), vue.createElementBlock(
+                vue.Fragment,
+                null,
+                vue.renderList($setup.sessionList, (s) => {
+                  return vue.openBlock(), vue.createElementBlock("view", {
+                    key: s.id,
+                    class: vue.normalizeClass(["history-item", { active: String(s.id) === String($setup.sessionId) }]),
+                    onClick: ($event) => $setup.loadSession(s.id)
+                  }, [
+                    vue.createElementVNode(
+                      "text",
+                      { class: "history-item-title" },
+                      vue.toDisplayString(s.title || "新对话"),
+                      1
+                      /* TEXT */
+                    ),
+                    vue.createElementVNode("text", { class: "history-item-meta" }, [
+                      vue.createTextVNode(
+                        vue.toDisplayString($setup.formatSessionTime(s.updatedAt)) + " ",
+                        1
+                        /* TEXT */
+                      ),
+                      $setup.isSessionCached(s.id) ? (vue.openBlock(), vue.createElementBlock("text", {
+                        key: 0,
+                        class: "history-local"
+                      }, " · 本地")) : vue.createCommentVNode("v-if", true)
+                    ])
+                  ], 10, ["onClick"]);
+                }),
+                128
+                /* KEYED_FRAGMENT */
+              )),
+              $setup.loadingSessions ? (vue.openBlock(), vue.createElementBlock("view", {
+                key: 1,
+                class: "history-loading"
+              }, [
+                vue.createElementVNode("text", { class: "history-loading-txt" }, "加载中...")
+              ])) : !$setup.sessionsHasNext && $setup.sessionList.length > 0 ? (vue.openBlock(), vue.createElementBlock("view", {
+                key: 2,
+                class: "history-loading"
+              }, [
+                vue.createElementVNode("text", { class: "history-loading-txt" }, "没有更多了")
+              ])) : vue.createCommentVNode("v-if", true)
+            ], 40, ["refresher-triggered"])
+          ])
+        ])) : vue.createCommentVNode("v-if", true),
+        $setup.addVisible ? (vue.openBlock(), vue.createElementBlock("view", {
+          key: 1,
+          class: "add-mask",
+          onClick: _cache[7] || (_cache[7] = ($event) => $setup.addVisible = false)
+        }, [
+          vue.createElementVNode("view", {
+            class: "add-panel",
+            onClick: _cache[6] || (_cache[6] = vue.withModifiers(() => {
+            }, ["stop"]))
+          }, [
+            (vue.openBlock(), vue.createElementBlock(
+              vue.Fragment,
+              null,
+              vue.renderList($setup.addOptions, (a) => {
+                return vue.createElementVNode("view", {
+                  class: "add-item",
+                  key: a.key,
+                  onClick: ($event) => $setup.onAdd(a.key)
+                }, [
+                  vue.createElementVNode(
+                    "view",
+                    {
+                      class: "add-icon-box",
+                      style: vue.normalizeStyle({ background: a.bg })
+                    },
+                    [
+                      vue.createElementVNode("text", { style: { "font-size": "36rpx", "color": "#7b6df0" } }, "🖼️")
+                    ],
+                    4
+                    /* STYLE */
+                  ),
+                  vue.createElementVNode(
+                    "text",
+                    { class: "add-label" },
+                    vue.toDisplayString(a.label),
+                    1
+                    /* TEXT */
+                  )
+                ], 8, ["onClick"]);
+              }),
+              64
+              /* STABLE_FRAGMENT */
+            ))
+          ])
+        ])) : vue.createCommentVNode("v-if", true)
+      ],
+      2
+      /* CLASS */
+    );
   }
   const PagesIndexIndex = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["render", _sfc_render$7], ["__scopeId", "data-v-1cf27b2a"], ["__file", "E:/HTML/ai_grow/pages/index/index.vue"]]);
   const _sfc_main$7 = {
@@ -5570,7 +5549,7 @@ if (uni.restoreGlobal) {
                 deviceId: getOrCreateDeviceId()
               });
             } catch (e) {
-              formatAppLog("warn", "at utils/push.js:62", "[push] register failed", e);
+              formatAppLog("warn", "at utils/push.js:63", "[push] register failed", e);
             }
             resolve();
           },
@@ -5583,6 +5562,17 @@ if (uni.restoreGlobal) {
     const data = normalizePushPayload(raw);
     if (data)
       uni.setStorageSync("pendingPushPayload", data);
+  }
+  function handleForegroundPush(raw) {
+    if (!getAccessToken()) {
+      storePendingPayload(raw);
+      return;
+    }
+    const data = normalizePushPayload(raw);
+    if (!data)
+      return;
+    handleRealtimeMessage(data);
+    storePendingPayload(raw);
   }
   function consumePendingPushNavigation() {
     const raw = uni.getStorageSync("pendingPushPayload");
@@ -5602,7 +5592,7 @@ if (uni.restoreGlobal) {
     try {
       uni.onPushMessage((res) => {
         const payload = res && res.data || res;
-        storePendingPayload(payload);
+        handleForegroundPush(payload);
       });
     } catch (e) {
     }
@@ -5614,7 +5604,7 @@ if (uni.restoreGlobal) {
         }, false);
         plus.push.addEventListener("receive", (msg) => {
           const payload = msg && msg.payload || msg;
-          storePendingPayload(payload);
+          handleForegroundPush(payload);
         }, false);
       }
     } catch (e) {

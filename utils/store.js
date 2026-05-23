@@ -12,7 +12,8 @@ export function refreshUnreadCount() {
   }
   return getUnreadCount()
     .then(res => {
-      store.unreadCount = res.count || 0
+      const n = res.unreadCount ?? res.count
+      store.unreadCount = Number(n) || 0
       return store.unreadCount
     })
     .catch(() => {
