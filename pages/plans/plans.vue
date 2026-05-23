@@ -1,5 +1,6 @@
 <template>
   <view class="plans-page">
+    <growth-task-mini-bar />
     <!-- 背景装饰 -->
     <view class="bg-decor">
       <view class="bg-ball b1"></view>
@@ -58,56 +59,109 @@
     <!-- 选中日期标题 -->
     <view class="selected-header" v-if="selectedDate">
       <text class="selected-label">{{ selectedLabel }}</text>
-      <text class="selected-count">{{ selectedPlans.length }} 项计划</text>
+      <text class="selected-count">{{ taskCount }} 项任务</text>
     </view>
 
-    <!-- 当日计划列表 -->
+    <!-- 当日任务列表 -->
     <scroll-view class="plan-scroll" scroll-y :bounces="false" :show-scrollbar="false">
       <view class="plan-list">
-        <view
-          v-for="(p, pi) in selectedPlans"
-          :key="p.id"
-          class="plan-card"
-          :class="{ show: loaded }" :style="{ transitionDelay: (pi * 0.08) + 's' }"
-        >
-          <view class="plan-left">
-            <view class="plan-color-bar" :style="{ background: p.color }"></view>
-            <view class="plan-info">
-              <text class="plan-name" :class="{ done: p.done }">{{ p.name }}</text>
-              <view class="plan-meta">
-                <text style="font-size:22rpx;">⏰</text>
-                <text class="plan-time">{{ p.time }}</text>
-              </view>
-            </view>
-          </view>
-          <view class="plan-check" :class="{ done: p.done }" @tap="toggleDone(p)">
-            <text v-if="p.done" style="font-size:28rpx;color:#fff;">✔</text>
-          </view>
+        <view v-if="loadingTasks" class="empty">
+          <text class="empty-text">加载中...</text>
         </view>
 
-        <!-- 空状态 -->
-        <view class="empty" v-if="selectedPlans.length === 0">
+        <template v-else>
+          <view
+            v-for="(p, pi) in dayTasks"
+            :key="p.id"
+            class="plan-card"
+            :class="{ show: loaded, locked: p.locked }"
+            :style="{ transitionDelay: (pi * 0.08) + 's' }"
+            @tap="onTaskTap(p)"
+          >
+            <view class="plan-left">
+              <view class="plan-color-bar" :style="{ background: p.color }"></view>
+              <view class="plan-info">
+                <text
+                  class="plan-name"
+                  :class="{ done: p.done, incomplete: p.incomplete, skipped: p.skipped }"
+                >{{ p.name }}</text>
+                <view class="plan-meta">
+                  <text style="font-size:22rpx;">{{ p.metaIcon }}</text>
+                  <text class="plan-time">{{ p.time }}</text>
+                </view>
+              </view>
+            </view>
+            <view
+              class="plan-check"
+              :class="{
+                done: p.done,
+                running: p.running,
+                locked: p.locked && !p.done,
+                skipped: p.skipped,
+                incomplete: p.incomplete,
+                starting: startingTaskId === p.id
+              }"
+              @tap.stop="onCheckTap(p)"
+            >
+              <text v-if="p.done" style="font-size:28rpx;color:#fff;">✔</text>
+              <text v-else-if="p.skipped" class="check-label">跳</text>
+              <text v-else-if="p.incomplete" class="check-label muted">—</text>
+              <view v-else-if="p.running" class="check-pulse"></view>
+              <text v-else-if="p.canStart" style="font-size:28rpx;color:#4facfe;">▶</text>
+              <text v-else class="check-label muted">—</text>
+            </view>
+          </view>
+
+          <view class="empty" v-if="dayTasks.length === 0">
           <text style="font-size:60rpx;opacity:0.3;">📅</text>
-          <text class="empty-text">这一天还没有计划</text>
-          <text class="empty-sub">点击右上角 + 添加</text>
-        </view>
+          <text class="empty-text">这一天还没有任务</text>
+          <text class="empty-sub">与 AI 对话确认成长计划后自动生成</text>
+          </view>
+        </template>
       </view>
     </scroll-view>
   </view>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import { getGrowthTasksByDate, startGrowthTask } from '../../utils/api.js'
+import { openGrowthTaskFocusPage } from '../../utils/growthTaskSession.js'
 
 const loaded = ref(false)
+const loadingTasks = ref(false)
+const startingTaskId = ref(null)
+let pollTimer = null
+let endRefreshTimer = null
 const weeks = ['日', '一', '二', '三', '四', '五', '六']
 
 const today = new Date()
 const curYear = ref(today.getFullYear())
 const curMonth = ref(today.getMonth() + 1)
 const selectedDate = ref(formatDate(today))
+const dayTasks = ref([])
+const datesWithTasks = ref({})
 
-onMounted(() => { nextTick(() => { setTimeout(() => { loaded.value = true }, 50) }) })
+const taskCount = computed(() => dayTasks.value.length)
+
+onMounted(() => {
+  nextTick(() => { setTimeout(() => { loaded.value = true }, 50) })
+  loadTasksForDate(selectedDate.value)
+})
+
+onShow(() => {
+  if (selectedDate.value) loadTasksForDate(selectedDate.value)
+})
+
+onUnmounted(() => {
+  clearTaskTimers()
+})
+
+watch(selectedDate, (date) => {
+  clearTaskTimers()
+  loadTasksForDate(date)
+})
 
 function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -129,42 +183,188 @@ const calendarDays = computed(() => {
   for (let d = 1; d <= daysInMonth; d++) {
     const full = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
     const isToday = full === formatDate(today)
-    const hasPlan = allPlans.value.some(p => p.date === full)
+    const hasPlan = !!datesWithTasks.value[full]
     days.push({ day: d, full, isToday, hasPlan })
   }
 
   return days
 })
 
-// 模拟计划数据
-const allPlans = ref([
-  { id: 1, name: '晨会', time: '09:00 - 09:30', date: formatDate(today), color: '#7b6df0', done: false },
-  { id: 2, name: '开发任务', time: '10:00 - 12:00', date: formatDate(today), color: '#67c23a', done: false },
-  { id: 3, name: '午餐', time: '12:00 - 13:00', date: formatDate(today), color: '#e6a23c', done: true },
-  { id: 4, name: '项目复盘', time: '15:00 - 16:00', date: formatDate(today), color: '#f56c6c', done: false },
-])
+const FINAL_STATUS = ['COMPLETED', 'SKIPPED', 'INCOMPLETE']
 
-// 补充更多日期的计划
-const addDays = (n) => {
-  const d = new Date(today)
-  d.setDate(d.getDate() + n)
-  return formatDate(d)
+const STATUS_COLORS = {
+  COMPLETED: '#67c23a',
+  IN_PROGRESS: '#4facfe',
+  PENDING: '#7b6df0',
+  SKIPPED: '#c0c4cc',
+  INCOMPLETE: '#f56c6c'
 }
 
-allPlans.value.push(
-  { id: 5, name: '会议', time: '10:00 - 11:00', date: addDays(1), color: '#7b6df0', done: false },
-  { id: 6, name: '健身', time: '14:00 - 15:30', date: addDays(1), color: '#67c23a', done: false },
-  { id: 7, name: '学习', time: '20:00 - 22:00', date: addDays(1), color: '#409eff', done: false },
-  { id: 8, name: '阅读', time: '08:00 - 09:00', date: addDays(3), color: '#e6a23c', done: false },
-  { id: 9, name: '团队周会', time: '10:00 - 11:30', date: addDays(5), color: '#f56c6c', done: false },
-  { id: 10, name: '健身', time: '18:00 - 19:30', date: addDays(5), color: '#67c23a', done: false },
-  { id: 11, name: '月度总结', time: '14:00 - 16:00', date: addDays(-2), color: '#7b6df0', done: true },
-  { id: 12, name: '需求评审', time: '10:00 - 11:00', date: addDays(-2), color: '#e6a23c', done: true },
-)
+const STATUS_LABELS = {
+  PENDING: '待执行',
+  IN_PROGRESS: '进行中',
+  COMPLETED: '已完成',
+  SKIPPED: '已跳过',
+  INCOMPLETE: '未完成'
+}
 
-const selectedPlans = computed(() => {
-  return allPlans.value.filter(p => p.date === selectedDate.value)
-})
+function formatTimeFromIso(iso) {
+  if (!iso) return ''
+  const m = String(iso).match(/T(\d{2}):(\d{2})/)
+  return m ? `${m[1]}:${m[2]}` : ''
+}
+
+function isPlanActionDay(viewDate, scheduledDate) {
+  return viewDate === formatDate(today) && scheduledDate === viewDate
+}
+
+function formatRemaining(plannedEndAt) {
+  if (!plannedEndAt) return '进行中'
+  const end = new Date(plannedEndAt).getTime()
+  if (Number.isNaN(end)) return '进行中'
+  const min = Math.ceil((end - Date.now()) / 60000)
+  if (min <= 0) return '即将结束…'
+  return `进行中 · 约 ${min} 分钟后结束`
+}
+
+function formatTaskTime(task, status) {
+  if (status === 'INCOMPLETE') return '已过期未完成'
+  if (status === 'SKIPPED') return '已跳过'
+  if (status === 'IN_PROGRESS') return formatRemaining(task.plannedEndAt)
+  const start = formatTimeFromIso(task.startedAt)
+  const end = formatTimeFromIso(task.plannedEndAt)
+  if (start && end) return `${start} - ${end}`
+  if (start) return start
+  if (task.estimatedMinutes) return `约 ${task.estimatedMinutes} 分钟`
+  return ''
+}
+
+function mapGrowthTask(task, viewDate) {
+  const status = task.status || 'PENDING'
+  const scheduledDate = task.scheduledDate || viewDate
+  const isFinal = FINAL_STATUS.includes(status)
+  const canActOnDay = isPlanActionDay(viewDate, scheduledDate)
+  const running = status === 'IN_PROGRESS'
+  const done = status === 'COMPLETED'
+  const skipped = status === 'SKIPPED'
+  const incomplete = status === 'INCOMPLETE'
+  const canStart = status === 'PENDING' && canActOnDay
+  const canCompleteEarly = running && canActOnDay
+  const locked = isFinal || (!canStart && !canCompleteEarly)
+
+  let metaIcon = '⏰'
+  if (running) metaIcon = '⏳'
+  else if (incomplete) metaIcon = '⚠️'
+  else if (skipped) metaIcon = '⊘'
+
+  return {
+    id: task.id,
+    name: task.title || '未命名任务',
+    time: formatTaskTime(task, status),
+    date: scheduledDate,
+    color: STATUS_COLORS[status] || '#7b6df0',
+    done,
+    skipped,
+    incomplete,
+    running,
+    locked,
+    canStart,
+    canCompleteEarly,
+    canActOnDay,
+    status,
+    metaIcon,
+    description: task.description || '',
+    plannedEndAt: task.plannedEndAt || '',
+    startedAt: task.startedAt || '',
+    estimatedMinutes: task.estimatedMinutes
+  }
+}
+
+function toFocusTask(p) {
+  return {
+    id: p.id,
+    title: p.name,
+    description: p.description,
+    scheduledDate: p.date,
+    startedAt: p.startedAt,
+    plannedEndAt: p.plannedEndAt,
+    estimatedMinutes: p.estimatedMinutes,
+    status: 'IN_PROGRESS'
+  }
+}
+
+function openFocusSession(p) {
+  openGrowthTaskFocusPage(toFocusTask(p))
+}
+
+function clearTaskTimers() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+  if (endRefreshTimer) {
+    clearTimeout(endRefreshTimer)
+    endRefreshTimer = null
+  }
+}
+
+function scheduleTaskRefresh() {
+  clearTaskTimers()
+  const running = dayTasks.value.filter(t => t.running && t.plannedEndAt)
+  if (!running.length) return
+
+  pollTimer = setInterval(() => {
+    loadTasksForDate(selectedDate.value, { silent: true })
+  }, 30000)
+
+  let nearestEnd = Infinity
+  for (const t of running) {
+    const end = new Date(t.plannedEndAt).getTime()
+    if (!Number.isNaN(end) && end > Date.now()) {
+      nearestEnd = Math.min(nearestEnd, end)
+    }
+  }
+  if (nearestEnd !== Infinity) {
+    endRefreshTimer = setTimeout(() => {
+      loadTasksForDate(selectedDate.value, { silent: true })
+    }, nearestEnd - Date.now() + 800)
+  }
+}
+
+function upsertDayTask(rawTask) {
+  if (!rawTask || rawTask.id == null) return
+  const mapped = mapGrowthTask(rawTask, selectedDate.value)
+  const i = dayTasks.value.findIndex(t => t.id === mapped.id)
+  if (i >= 0) {
+    dayTasks.value = dayTasks.value.map((t, idx) => (idx === i ? mapped : t))
+  } else {
+    dayTasks.value = [...dayTasks.value, mapped]
+  }
+  scheduleTaskRefresh()
+}
+
+async function loadTasksForDate(date, options = {}) {
+  if (!date) return
+  const { silent = false } = options
+  if (!silent) loadingTasks.value = true
+  try {
+    const res = await getGrowthTasksByDate(date)
+    const list = (res.tasks || []).map(t => mapGrowthTask(t, date))
+    dayTasks.value = list
+    datesWithTasks.value = {
+      ...datesWithTasks.value,
+      [date]: (res.count != null ? res.count : list.length) > 0
+    }
+    scheduleTaskRefresh()
+  } catch (e) {
+    if (!silent) {
+      dayTasks.value = []
+      uni.showToast({ title: e.message || '加载任务失败', icon: 'none' })
+    }
+  } finally {
+    if (!silent) loadingTasks.value = false
+  }
+}
 
 const selectedLabel = computed(() => {
   if (!selectedDate.value) return ''
@@ -197,8 +397,70 @@ function nextMonth() {
   }
 }
 
-function toggleDone(p) {
-  p.done = !p.done
+function lockedToast(p) {
+  if (p.incomplete) {
+    return '该任务已过期未完成，无法开始或完成'
+  }
+  if (p.skipped) return '该任务已跳过'
+  if (p.done) return '该任务已完成'
+  if (p.status === 'PENDING' && !p.canActOnDay) {
+    return selectedDate.value === formatDate(today)
+      ? '仅可在计划日当天操作'
+      : '请切换到计划日当天再操作'
+  }
+  return '当前状态无法操作'
+}
+
+async function onCheckTap(p) {
+  if (p.locked) {
+    uni.showToast({ title: lockedToast(p), icon: 'none' })
+    return
+  }
+  if (startingTaskId.value) return
+
+  if (p.canCompleteEarly) {
+    openFocusSession(p)
+    return
+  }
+  if (!p.canStart) return
+
+  startingTaskId.value = p.id
+  try {
+    const updated = await startGrowthTask(p.id)
+    if (updated && updated.id != null) {
+      upsertDayTask(updated)
+      if (updated.status === 'IN_PROGRESS') {
+        openGrowthTaskFocusPage(updated)
+        return
+      }
+    } else {
+      await loadTasksForDate(selectedDate.value, { silent: true })
+      const running = dayTasks.value.find(t => t.id === p.id && t.running)
+      if (running) openFocusSession(running)
+      return
+    }
+    uni.showToast({ title: '已开始执行', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '开始失败', icon: 'none' })
+  } finally {
+    startingTaskId.value = null
+  }
+}
+
+function goBack() {
+  if (p.running) {
+    openFocusSession(p)
+    return
+  }
+  const statusLabel = STATUS_LABELS[p.status] || p.status
+  let hint = ''
+  if (p.canStart) hint = '，点击 ▶ 开始'
+  else if (p.incomplete) hint = '，已过期不可操作'
+  uni.showToast({
+    title: p.name + ' · ' + statusLabel + hint,
+    icon: 'none',
+    duration: 2500
+  })
 }
 
 function goBack() {
@@ -456,6 +718,10 @@ function addPlan() {
   opacity: 0.85;
 }
 
+.plan-card.locked:active {
+  opacity: 1;
+}
+
 .plan-left {
   display: flex;
   align-items: center;
@@ -484,6 +750,15 @@ function addPlan() {
 
 .plan-name.done {
   color: #ccc;
+  text-decoration: line-through;
+}
+
+.plan-name.incomplete {
+  color: #e6a0a0;
+}
+
+.plan-name.skipped {
+  color: #bbb;
   text-decoration: line-through;
 }
 
@@ -519,6 +794,50 @@ function addPlan() {
   background: linear-gradient(135deg, #4facfe, #6cb4ee);
   border-color: transparent;
   box-shadow: 0 4rpx 12rpx rgba(79, 172, 254, 0.3);
+}
+
+.plan-check.running {
+  border-color: #4facfe;
+  background: rgba(79, 172, 254, 0.12);
+}
+
+.plan-check.locked,
+.plan-check.incomplete,
+.plan-check.skipped {
+  border-color: #e8e8e8;
+  background: #f7f7f7;
+}
+
+.plan-check.incomplete {
+  border-color: #f5d0d0;
+  background: #fff5f5;
+}
+
+.check-label {
+  font-size: 22rpx;
+  color: #999;
+  font-weight: 600;
+}
+
+.check-label.muted {
+  color: #ccc;
+}
+
+.plan-check.starting {
+  opacity: 0.6;
+}
+
+.check-pulse {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #4facfe;
+  animation: checkPulse 1s ease-in-out infinite;
+}
+
+@keyframes checkPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.75); opacity: 0.5; }
 }
 
 /* 空状态 */

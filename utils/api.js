@@ -427,6 +427,37 @@ export function rejectPlanProposal(proposalId) {
   })
 }
 
+// ============ 成长任务（计划日历） ============
+
+// 按日期查询当前用户的成长任务
+export function getGrowthTasksByDate(date) {
+  return request({
+    url: '/api/v1/users/me/growth-tasks?date=' + encodeURIComponent(date),
+    method: 'GET',
+    auth: true
+  })
+}
+
+// 开始执行任务（后端根据 estimatedMinutes 计算 plannedEndAt，到期自动结束）
+export function startGrowthTask(taskId) {
+  return request({
+    url: '/api/v1/users/me/growth-tasks/' + taskId + '/start',
+    method: 'POST',
+    data: {},
+    auth: true
+  })
+}
+
+// 提前完成（可选填写实际用时与质量评分）
+export function completeGrowthTask(taskId, data = {}) {
+  return request({
+    url: '/api/v1/users/me/growth-tasks/' + taskId + '/complete',
+    method: 'POST',
+    data,
+    auth: true
+  })
+}
+
 // ============ 助手任务 ============
 
 // 查询当前用户的助手任务

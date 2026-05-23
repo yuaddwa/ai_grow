@@ -1,5 +1,6 @@
 <template>
   <view class="page" :class="{ 'keyboard-open': keyboardHeight > 0 }">
+    <growth-task-mini-bar />
     <view class="top-bar" :class="{ show: loaded }">
       <text class="top-title">AI成长</text>
       <view class="top-actions">
@@ -37,20 +38,23 @@
             </view>
             <view v-if="msg.role === 'ai'" class="card-ai">
             <view v-if="msg.type === 'loading'" class="ai-loading-wrap">
-              <view class="ai-reply-loader">
-                <svg class="circle-outer" viewBox="0 0 86 86">
-                  <circle class="back" cx="43" cy="43" r="40" fill="none" />
-                  <circle class="front" cx="43" cy="43" r="40" fill="none" />
-                </svg>
-                <svg class="circle-middle" viewBox="0 0 60 60">
-                  <circle class="back" cx="30" cy="30" r="27" fill="none" />
-                  <circle class="front" cx="30" cy="30" r="27" fill="none" />
-                </svg>
-                <svg class="circle-inner" viewBox="0 0 34 34">
-                  <circle class="back" cx="17" cy="17" r="14" fill="none" />
-                  <circle class="front" cx="17" cy="17" r="14" fill="none" />
-                </svg>
-                <view class="text" data-text="loading"></view>
+              <view class="loader">
+                <view class="loader-ship">
+                  <view></view>
+                  <view></view>
+                  <view></view>
+                  <view></view>
+                  <view class="base">
+                    <view></view>
+                  </view>
+                  <view class="face"></view>
+                </view>
+                <view class="longfazers">
+                  <view></view>
+                  <view></view>
+                  <view></view>
+                  <view></view>
+                </view>
               </view>
             </view>
             <view v-else-if="msg.type === 'text'">
@@ -1347,6 +1351,7 @@ page { height: 100%; background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%
 .card-ai {
   background: #fff; border-radius: 16rpx; padding: 22rpx; max-width: 88%;
   box-shadow: 0 2rpx 10rpx rgba(79,172,254,0.06);
+  overflow: visible;
 }
 .ai-avatar {
   flex-shrink: 0;

@@ -32,6 +32,7 @@ if (uni.restoreGlobal) {
 (function(vue) {
   "use strict";
   const ON_SHOW = "onShow";
+  const ON_HIDE = "onHide";
   const ON_LOAD = "onLoad";
   function formatAppLog(type, filename, ...args) {
     if (uni.__log__) {
@@ -51,396 +52,16 @@ if (uni.restoreGlobal) {
     1 | 2
     /* HookFlags.PAGE */
   );
+  const onHide = /* @__PURE__ */ createLifeCycleHook(
+    ON_HIDE,
+    1 | 2
+    /* HookFlags.PAGE */
+  );
   const onLoad = /* @__PURE__ */ createLifeCycleHook(
     ON_LOAD,
     2
     /* HookFlags.PAGE */
   );
-  function isTableRow(line) {
-    return line.startsWith("|") && line.includes("|");
-  }
-  function parseTableRow(line) {
-    const parts = line.replace(/^\|/, "").replace(/\|$/, "").split("|");
-    return parts.map((c) => c.trim());
-  }
-  function parseTable(lines) {
-    if (lines.length < 1)
-      return null;
-    const headers = parseTableRow(lines[0]);
-    let startIdx = 1;
-    if (lines.length > 1 && /^\|[\s\-:|]+\|$/.test(lines[1]))
-      startIdx = 2;
-    const rows = [];
-    for (let j = startIdx; j < lines.length; j++) {
-      rows.push(parseTableRow(lines[j]));
-    }
-    return { type: "table", headers, rows };
-  }
-  function parseMarkdown(content) {
-    if (!content || typeof content !== "string")
-      return [];
-    const lines = content.replace(/\r\n/g, "\n").split("\n");
-    const blocks = [];
-    let i = 0;
-    while (i < lines.length) {
-      const trimmed = lines[i].trim();
-      if (!trimmed) {
-        i++;
-        continue;
-      }
-      if (isTableRow(trimmed)) {
-        const tableLines = [];
-        while (i < lines.length && isTableRow(lines[i].trim())) {
-          tableLines.push(lines[i].trim());
-          i++;
-        }
-        const table = parseTable(tableLines);
-        if (table)
-          blocks.push(table);
-        continue;
-      }
-      if (/^[-*_]{3,}$/.test(trimmed)) {
-        blocks.push({ type: "hr" });
-        i++;
-        continue;
-      }
-      const hm = trimmed.match(/^(#{1,3})\s+(.+)$/);
-      if (hm) {
-        blocks.push({ type: "h" + hm[1].length, text: hm[2] });
-        i++;
-        continue;
-      }
-      if (/^[-*]\s+/.test(trimmed)) {
-        const items = [];
-        while (i < lines.length && /^[-*]\s+/.test(lines[i].trim())) {
-          items.push(lines[i].trim().replace(/^[-*]\s+/, ""));
-          i++;
-        }
-        blocks.push({ type: "list", items });
-        continue;
-      }
-      const paraLines = [];
-      while (i < lines.length) {
-        const t = lines[i].trim();
-        if (!t)
-          break;
-        if (isTableRow(t) || /^(#{1,3})\s+/.test(t) || /^[-*_]{3,}$/.test(t) || /^[-*]\s+/.test(t))
-          break;
-        paraLines.push(t);
-        i++;
-      }
-      if (paraLines.length)
-        blocks.push({ type: "p", text: paraLines.join("\n") });
-    }
-    return blocks;
-  }
-  function parseInline(text) {
-    if (!text)
-      return [{ text: "", bold: false }];
-    const segments = [];
-    const re = /\*\*(.+?)\*\*/g;
-    let last = 0;
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      if (m.index > last)
-        segments.push({ text: text.slice(last, m.index), bold: false });
-      segments.push({ text: m[1], bold: true });
-      last = m.index + m[0].length;
-    }
-    if (last < text.length)
-      segments.push({ text: text.slice(last), bold: false });
-    if (!segments.length)
-      segments.push({ text: String(text), bold: false });
-    return segments;
-  }
-  const _export_sfc = (sfc, props) => {
-    const target = sfc.__vccOpts || sfc;
-    for (const [key, val] of props) {
-      target[key] = val;
-    }
-    return target;
-  };
-  const _sfc_main$9 = {
-    __name: "markdown-content",
-    props: {
-      content: { type: String, default: "" }
-    },
-    setup(__props, { expose: __expose }) {
-      __expose();
-      const props = __props;
-      const blocks = vue.computed(() => parseMarkdown(props.content));
-      function inlineSegments(text) {
-        return parseInline(text);
-      }
-      function tableMinWidth(block) {
-        var _a;
-        const cols = ((_a = block.headers) == null ? void 0 : _a.length) || 1;
-        return cols * 160 + "rpx";
-      }
-      const __returned__ = { props, blocks, inlineSegments, tableMinWidth, computed: vue.computed, get parseMarkdown() {
-        return parseMarkdown;
-      }, get parseInline() {
-        return parseInline;
-      } };
-      Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
-      return __returned__;
-    }
-  };
-  function _sfc_render$8(_ctx, _cache, $props, $setup, $data, $options) {
-    return vue.openBlock(), vue.createElementBlock("view", { class: "md-root" }, [
-      (vue.openBlock(true), vue.createElementBlock(
-        vue.Fragment,
-        null,
-        vue.renderList($setup.blocks, (block, bi) => {
-          return vue.openBlock(), vue.createElementBlock(
-            vue.Fragment,
-            { key: bi },
-            [
-              block.type === "h1" ? (vue.openBlock(), vue.createElementBlock("text", {
-                key: 0,
-                class: "md-h1"
-              }, [
-                (vue.openBlock(true), vue.createElementBlock(
-                  vue.Fragment,
-                  null,
-                  vue.renderList($setup.inlineSegments(block.text), (seg, si) => {
-                    return vue.openBlock(), vue.createElementBlock(
-                      "text",
-                      {
-                        key: "h1-" + si,
-                        class: vue.normalizeClass({ "md-bold": seg.bold })
-                      },
-                      vue.toDisplayString(seg.text),
-                      3
-                      /* TEXT, CLASS */
-                    );
-                  }),
-                  128
-                  /* KEYED_FRAGMENT */
-                ))
-              ])) : block.type === "h2" ? (vue.openBlock(), vue.createElementBlock("text", {
-                key: 1,
-                class: "md-h2"
-              }, [
-                (vue.openBlock(true), vue.createElementBlock(
-                  vue.Fragment,
-                  null,
-                  vue.renderList($setup.inlineSegments(block.text), (seg, si) => {
-                    return vue.openBlock(), vue.createElementBlock(
-                      "text",
-                      {
-                        key: "h2-" + si,
-                        class: vue.normalizeClass({ "md-bold": seg.bold })
-                      },
-                      vue.toDisplayString(seg.text),
-                      3
-                      /* TEXT, CLASS */
-                    );
-                  }),
-                  128
-                  /* KEYED_FRAGMENT */
-                ))
-              ])) : block.type === "h3" ? (vue.openBlock(), vue.createElementBlock("text", {
-                key: 2,
-                class: "md-h3"
-              }, [
-                (vue.openBlock(true), vue.createElementBlock(
-                  vue.Fragment,
-                  null,
-                  vue.renderList($setup.inlineSegments(block.text), (seg, si) => {
-                    return vue.openBlock(), vue.createElementBlock(
-                      "text",
-                      {
-                        key: "h3-" + si,
-                        class: vue.normalizeClass({ "md-bold": seg.bold })
-                      },
-                      vue.toDisplayString(seg.text),
-                      3
-                      /* TEXT, CLASS */
-                    );
-                  }),
-                  128
-                  /* KEYED_FRAGMENT */
-                ))
-              ])) : block.type === "hr" ? (vue.openBlock(), vue.createElementBlock("view", {
-                key: 3,
-                class: "md-hr"
-              })) : block.type === "list" ? (vue.openBlock(), vue.createElementBlock("view", {
-                key: 4,
-                class: "md-list"
-              }, [
-                (vue.openBlock(true), vue.createElementBlock(
-                  vue.Fragment,
-                  null,
-                  vue.renderList(block.items, (item, li) => {
-                    return vue.openBlock(), vue.createElementBlock("view", {
-                      key: li,
-                      class: "md-li"
-                    }, [
-                      vue.createElementVNode("text", { class: "md-li-dot" }, "•"),
-                      vue.createElementVNode("text", { class: "md-li-text" }, [
-                        (vue.openBlock(true), vue.createElementBlock(
-                          vue.Fragment,
-                          null,
-                          vue.renderList($setup.inlineSegments(item), (seg, si) => {
-                            return vue.openBlock(), vue.createElementBlock(
-                              "text",
-                              {
-                                key: si,
-                                class: vue.normalizeClass({ "md-bold": seg.bold })
-                              },
-                              vue.toDisplayString(seg.text),
-                              3
-                              /* TEXT, CLASS */
-                            );
-                          }),
-                          128
-                          /* KEYED_FRAGMENT */
-                        ))
-                      ])
-                    ]);
-                  }),
-                  128
-                  /* KEYED_FRAGMENT */
-                ))
-              ])) : block.type === "table" ? (vue.openBlock(), vue.createElementBlock("scroll-view", {
-                key: 5,
-                "scroll-x": "",
-                class: "md-table-scroll",
-                "show-scrollbar": false
-              }, [
-                vue.createElementVNode(
-                  "view",
-                  {
-                    class: "md-table",
-                    style: vue.normalizeStyle({ minWidth: $setup.tableMinWidth(block) })
-                  },
-                  [
-                    vue.createElementVNode("view", { class: "md-tr md-tr-head" }, [
-                      (vue.openBlock(true), vue.createElementBlock(
-                        vue.Fragment,
-                        null,
-                        vue.renderList(block.headers, (cell, ci) => {
-                          return vue.openBlock(), vue.createElementBlock("view", {
-                            key: "th-" + ci,
-                            class: "md-th"
-                          }, [
-                            vue.createElementVNode("text", { class: "md-cell" }, [
-                              (vue.openBlock(true), vue.createElementBlock(
-                                vue.Fragment,
-                                null,
-                                vue.renderList($setup.inlineSegments(cell), (seg, si) => {
-                                  return vue.openBlock(), vue.createElementBlock(
-                                    "text",
-                                    {
-                                      key: si,
-                                      class: vue.normalizeClass({ "md-bold": seg.bold })
-                                    },
-                                    vue.toDisplayString(seg.text),
-                                    3
-                                    /* TEXT, CLASS */
-                                  );
-                                }),
-                                128
-                                /* KEYED_FRAGMENT */
-                              ))
-                            ])
-                          ]);
-                        }),
-                        128
-                        /* KEYED_FRAGMENT */
-                      ))
-                    ]),
-                    (vue.openBlock(true), vue.createElementBlock(
-                      vue.Fragment,
-                      null,
-                      vue.renderList(block.rows, (row, ri) => {
-                        return vue.openBlock(), vue.createElementBlock(
-                          "view",
-                          {
-                            key: "tr-" + ri,
-                            class: vue.normalizeClass(["md-tr", { "md-tr-alt": ri % 2 === 1 }])
-                          },
-                          [
-                            (vue.openBlock(true), vue.createElementBlock(
-                              vue.Fragment,
-                              null,
-                              vue.renderList(row, (cell, ci) => {
-                                return vue.openBlock(), vue.createElementBlock("view", {
-                                  key: "td-" + ci,
-                                  class: "md-td"
-                                }, [
-                                  vue.createElementVNode("text", { class: "md-cell" }, [
-                                    (vue.openBlock(true), vue.createElementBlock(
-                                      vue.Fragment,
-                                      null,
-                                      vue.renderList($setup.inlineSegments(cell), (seg, si) => {
-                                        return vue.openBlock(), vue.createElementBlock(
-                                          "text",
-                                          {
-                                            key: si,
-                                            class: vue.normalizeClass({ "md-bold": seg.bold })
-                                          },
-                                          vue.toDisplayString(seg.text),
-                                          3
-                                          /* TEXT, CLASS */
-                                        );
-                                      }),
-                                      128
-                                      /* KEYED_FRAGMENT */
-                                    ))
-                                  ])
-                                ]);
-                              }),
-                              128
-                              /* KEYED_FRAGMENT */
-                            ))
-                          ],
-                          2
-                          /* CLASS */
-                        );
-                      }),
-                      128
-                      /* KEYED_FRAGMENT */
-                    ))
-                  ],
-                  4
-                  /* STYLE */
-                )
-              ])) : block.type === "p" ? (vue.openBlock(), vue.createElementBlock("text", {
-                key: 6,
-                class: "md-p"
-              }, [
-                (vue.openBlock(true), vue.createElementBlock(
-                  vue.Fragment,
-                  null,
-                  vue.renderList($setup.inlineSegments(block.text), (seg, si) => {
-                    return vue.openBlock(), vue.createElementBlock(
-                      "text",
-                      {
-                        key: "p-" + si,
-                        class: vue.normalizeClass({ "md-bold": seg.bold })
-                      },
-                      vue.toDisplayString(seg.text),
-                      3
-                      /* TEXT, CLASS */
-                    );
-                  }),
-                  128
-                  /* KEYED_FRAGMENT */
-                ))
-              ])) : vue.createCommentVNode("v-if", true)
-            ],
-            64
-            /* STABLE_FRAGMENT */
-          );
-        }),
-        128
-        /* KEYED_FRAGMENT */
-      ))
-    ]);
-  }
-  const __easycom_0 = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["render", _sfc_render$8], ["__scopeId", "data-v-00310203"], ["__file", "E:/HTML/ai_grow/components/markdown-content/markdown-content.vue"]]);
   const scriptRel = "modulepreload";
   const assetsURL = function(dep) {
     return "/" + dep;
@@ -916,6 +537,29 @@ if (uni.restoreGlobal) {
       auth: true
     });
   }
+  function getGrowthTasksByDate(date) {
+    return request({
+      url: "/api/v1/users/me/growth-tasks?date=" + encodeURIComponent(date),
+      method: "GET",
+      auth: true
+    });
+  }
+  function startGrowthTask(taskId) {
+    return request({
+      url: "/api/v1/users/me/growth-tasks/" + taskId + "/start",
+      method: "POST",
+      data: {},
+      auth: true
+    });
+  }
+  function completeGrowthTask$1(taskId, data = {}) {
+    return request({
+      url: "/api/v1/users/me/growth-tasks/" + taskId + "/complete",
+      method: "POST",
+      data,
+      auth: true
+    });
+  }
   function getMyTasks(status) {
     const params = status ? "?status=" + status : "";
     return request({
@@ -953,6 +597,649 @@ if (uni.restoreGlobal) {
       auth: true
     });
   }
+  const growthTaskSession = vue.reactive({
+    active: false,
+    minimized: false,
+    onFocusPage: false,
+    task: null,
+    tick: 0
+  });
+  const QUOTES = [
+    "专注的每一分钟，都在为更好的自己蓄力。",
+    "不必和别人比，今天比昨天更进一步就够了。",
+    "行动是治愈焦虑最好的方式，你已经在路上了。",
+    "坚持不是不累，而是累了仍然选择继续。",
+    "把眼前这一件事做好，就是最好的成长策略。",
+    "你比想象中更有力量，再专注一会儿试试。",
+    "慢一点没关系，重要的是你没有停下来。",
+    "每一次认真完成，都会让你更靠近目标。",
+    "此刻的专注，是未来感谢现在的理由。",
+    "相信自己，你正在变成更自律、更优秀的人。",
+    "完成比完美更重要，先把它做完！",
+    "呼吸、专注、行动——这就是进步的节奏。"
+  ];
+  let tickTimer = null;
+  function pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+  function normalizeGrowthTask(task) {
+    if (!task)
+      return null;
+    return {
+      id: task.id,
+      title: task.title || task.name || "成长任务",
+      description: task.description || "",
+      scheduledDate: task.scheduledDate || task.date || "",
+      startedAt: task.startedAt || "",
+      plannedEndAt: task.plannedEndAt || "",
+      estimatedMinutes: task.estimatedMinutes,
+      status: task.status || "IN_PROGRESS"
+    };
+  }
+  function formatCountdown(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1e3));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor(total % 3600 / 60);
+    const s = total % 60;
+    if (h > 0)
+      return `${h}:${pad2(m)}:${pad2(s)}`;
+    return `${pad2(m)}:${pad2(s)}`;
+  }
+  function getRemainingMs() {
+    void growthTaskSession.tick;
+    const task = growthTaskSession.task;
+    if (!(task == null ? void 0 : task.plannedEndAt))
+      return 0;
+    const end = new Date(task.plannedEndAt).getTime();
+    if (Number.isNaN(end))
+      return 0;
+    return Math.max(0, end - Date.now());
+  }
+  function getElapsedMs() {
+    void growthTaskSession.tick;
+    const task = growthTaskSession.task;
+    if (!(task == null ? void 0 : task.startedAt))
+      return 0;
+    const start = new Date(task.startedAt).getTime();
+    if (Number.isNaN(start))
+      return 0;
+    return Math.max(0, Date.now() - start);
+  }
+  function getProgressPercent() {
+    void growthTaskSession.tick;
+    const task = growthTaskSession.task;
+    if (!task)
+      return 0;
+    const start = task.startedAt ? new Date(task.startedAt).getTime() : NaN;
+    const end = task.plannedEndAt ? new Date(task.plannedEndAt).getTime() : NaN;
+    if (Number.isNaN(start) || Number.isNaN(end) || end <= start)
+      return 0;
+    const p = (Date.now() - start) / (end - start) * 100;
+    return Math.min(100, Math.max(0, p));
+  }
+  function getCurrentQuote() {
+    void growthTaskSession.tick;
+    const idx = Math.floor(Date.now() / 8e3) % QUOTES.length;
+    return QUOTES[idx];
+  }
+  function startTick() {
+    stopTick();
+    tickTimer = setInterval(() => {
+      growthTaskSession.tick += 1;
+      if (!growthTaskSession.active)
+        return;
+      const left = getRemainingMs();
+      if (left <= 0 && growthTaskSession.task) {
+        refreshActiveGrowthTask().catch(() => {
+        });
+      }
+    }, 1e3);
+  }
+  function stopTick() {
+    if (tickTimer) {
+      clearInterval(tickTimer);
+      tickTimer = null;
+    }
+  }
+  function setActiveGrowthTask(task) {
+    const normalized = normalizeGrowthTask(task);
+    if (!normalized || normalized.status !== "IN_PROGRESS")
+      return false;
+    growthTaskSession.task = normalized;
+    growthTaskSession.active = true;
+    growthTaskSession.minimized = false;
+    startTick();
+    return true;
+  }
+  function clearActiveGrowthTask() {
+    growthTaskSession.active = false;
+    growthTaskSession.minimized = false;
+    growthTaskSession.onFocusPage = false;
+    growthTaskSession.task = null;
+    stopTick();
+  }
+  function minimizeGrowthTask() {
+    growthTaskSession.minimized = true;
+    growthTaskSession.onFocusPage = false;
+  }
+  function showMiniBar() {
+    return growthTaskSession.active && growthTaskSession.task && growthTaskSession.task.status === "IN_PROGRESS" && growthTaskSession.minimized && !growthTaskSession.onFocusPage;
+  }
+  function openGrowthTaskFocusPage(task) {
+    if (!setActiveGrowthTask(task))
+      return;
+    growthTaskSession.minimized = false;
+    growthTaskSession.onFocusPage = true;
+    uni.navigateTo({ url: "/pages/growth-task-focus/growth-task-focus" });
+  }
+  function reopenGrowthTaskFocusPage() {
+    if (!growthTaskSession.active || !growthTaskSession.task)
+      return;
+    growthTaskSession.minimized = false;
+    growthTaskSession.onFocusPage = true;
+    uni.navigateTo({ url: "/pages/growth-task-focus/growth-task-focus" });
+  }
+  async function refreshActiveGrowthTask() {
+    const task = growthTaskSession.task;
+    if (!(task == null ? void 0 : task.id) || !task.scheduledDate)
+      return null;
+    try {
+      const res = await getGrowthTasksByDate(task.scheduledDate);
+      const found = (res.tasks || []).find((t) => t.id === task.id);
+      if (!found) {
+        clearActiveGrowthTask();
+        return null;
+      }
+      if (found.status !== "IN_PROGRESS") {
+        clearActiveGrowthTask();
+        if (found.status === "COMPLETED") {
+          uni.showToast({ title: "任务已完成", icon: "success" });
+        }
+        return found;
+      }
+      growthTaskSession.task = normalizeGrowthTask(found);
+      return found;
+    } catch (e) {
+      return null;
+    }
+  }
+  const _export_sfc = (sfc, props) => {
+    const target = sfc.__vccOpts || sfc;
+    for (const [key, val] of props) {
+      target[key] = val;
+    }
+    return target;
+  };
+  const _sfc_main$b = {
+    __name: "growth-task-mini-bar",
+    setup(__props, { expose: __expose }) {
+      __expose();
+      const statusBarHeight = vue.ref(20);
+      vue.onMounted(() => {
+        const sys = uni.getSystemInfoSync();
+        statusBarHeight.value = sys.statusBarHeight || 20;
+      });
+      const visible = vue.computed(() => showMiniBar());
+      const taskTitle = vue.computed(() => {
+        var _a;
+        void growthTaskSession.tick;
+        const t = ((_a = growthTaskSession.task) == null ? void 0 : _a.title) || "进行中";
+        return t.length > 12 ? t.slice(0, 12) + "…" : t;
+      });
+      const countdown = vue.computed(() => {
+        void growthTaskSession.tick;
+        return formatCountdown(getRemainingMs());
+      });
+      const progress = vue.computed(() => {
+        void growthTaskSession.tick;
+        return getProgressPercent();
+      });
+      function onTap() {
+        reopenGrowthTaskFocusPage();
+      }
+      const __returned__ = { statusBarHeight, visible, taskTitle, countdown, progress, onTap, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted, get growthTaskSession() {
+        return growthTaskSession;
+      }, get showMiniBar() {
+        return showMiniBar;
+      }, get getRemainingMs() {
+        return getRemainingMs;
+      }, get getProgressPercent() {
+        return getProgressPercent;
+      }, get formatCountdown() {
+        return formatCountdown;
+      }, get reopenGrowthTaskFocusPage() {
+        return reopenGrowthTaskFocusPage;
+      } };
+      Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
+      return __returned__;
+    }
+  };
+  function _sfc_render$b(_ctx, _cache, $props, $setup, $data, $options) {
+    return $setup.visible ? (vue.openBlock(), vue.createElementBlock(
+      "view",
+      {
+        key: 0,
+        class: "mini-bar",
+        style: vue.normalizeStyle({ paddingTop: $setup.statusBarHeight + "px" }),
+        onClick: $setup.onTap
+      },
+      [
+        vue.createElementVNode("view", { class: "mini-inner" }, [
+          vue.createElementVNode("view", { class: "mini-pulse" }),
+          vue.createElementVNode("view", { class: "mini-texts" }, [
+            vue.createElementVNode(
+              "text",
+              { class: "mini-title" },
+              vue.toDisplayString($setup.taskTitle),
+              1
+              /* TEXT */
+            ),
+            vue.createElementVNode(
+              "text",
+              { class: "mini-countdown" },
+              "剩余 " + vue.toDisplayString($setup.countdown),
+              1
+              /* TEXT */
+            )
+          ]),
+          vue.createElementVNode("view", { class: "mini-progress-wrap" }, [
+            vue.createElementVNode(
+              "view",
+              {
+                class: "mini-progress",
+                style: vue.normalizeStyle({ width: $setup.progress + "%" })
+              },
+              null,
+              4
+              /* STYLE */
+            )
+          ]),
+          vue.createElementVNode("text", { class: "mini-enter" }, "进入 ›")
+        ])
+      ],
+      4
+      /* STYLE */
+    )) : vue.createCommentVNode("v-if", true);
+  }
+  const __easycom_0 = /* @__PURE__ */ _export_sfc(_sfc_main$b, [["render", _sfc_render$b], ["__scopeId", "data-v-b052acc1"], ["__file", "E:/HTML/ai_grow/components/growth-task-mini-bar/growth-task-mini-bar.vue"]]);
+  function isTableRow(line) {
+    return line.startsWith("|") && line.includes("|");
+  }
+  function parseTableRow(line) {
+    const parts = line.replace(/^\|/, "").replace(/\|$/, "").split("|");
+    return parts.map((c) => c.trim());
+  }
+  function parseTable(lines) {
+    if (lines.length < 1)
+      return null;
+    const headers = parseTableRow(lines[0]);
+    let startIdx = 1;
+    if (lines.length > 1 && /^\|[\s\-:|]+\|$/.test(lines[1]))
+      startIdx = 2;
+    const rows = [];
+    for (let j = startIdx; j < lines.length; j++) {
+      rows.push(parseTableRow(lines[j]));
+    }
+    return { type: "table", headers, rows };
+  }
+  function parseMarkdown(content) {
+    if (!content || typeof content !== "string")
+      return [];
+    const lines = content.replace(/\r\n/g, "\n").split("\n");
+    const blocks = [];
+    let i = 0;
+    while (i < lines.length) {
+      const trimmed = lines[i].trim();
+      if (!trimmed) {
+        i++;
+        continue;
+      }
+      if (isTableRow(trimmed)) {
+        const tableLines = [];
+        while (i < lines.length && isTableRow(lines[i].trim())) {
+          tableLines.push(lines[i].trim());
+          i++;
+        }
+        const table = parseTable(tableLines);
+        if (table)
+          blocks.push(table);
+        continue;
+      }
+      if (/^[-*_]{3,}$/.test(trimmed)) {
+        blocks.push({ type: "hr" });
+        i++;
+        continue;
+      }
+      const hm = trimmed.match(/^(#{1,3})\s+(.+)$/);
+      if (hm) {
+        blocks.push({ type: "h" + hm[1].length, text: hm[2] });
+        i++;
+        continue;
+      }
+      if (/^[-*]\s+/.test(trimmed)) {
+        const items = [];
+        while (i < lines.length && /^[-*]\s+/.test(lines[i].trim())) {
+          items.push(lines[i].trim().replace(/^[-*]\s+/, ""));
+          i++;
+        }
+        blocks.push({ type: "list", items });
+        continue;
+      }
+      const paraLines = [];
+      while (i < lines.length) {
+        const t = lines[i].trim();
+        if (!t)
+          break;
+        if (isTableRow(t) || /^(#{1,3})\s+/.test(t) || /^[-*_]{3,}$/.test(t) || /^[-*]\s+/.test(t))
+          break;
+        paraLines.push(t);
+        i++;
+      }
+      if (paraLines.length)
+        blocks.push({ type: "p", text: paraLines.join("\n") });
+    }
+    return blocks;
+  }
+  function parseInline(text) {
+    if (!text)
+      return [{ text: "", bold: false }];
+    const segments = [];
+    const re = /\*\*(.+?)\*\*/g;
+    let last = 0;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last)
+        segments.push({ text: text.slice(last, m.index), bold: false });
+      segments.push({ text: m[1], bold: true });
+      last = m.index + m[0].length;
+    }
+    if (last < text.length)
+      segments.push({ text: text.slice(last), bold: false });
+    if (!segments.length)
+      segments.push({ text: String(text), bold: false });
+    return segments;
+  }
+  const _sfc_main$a = {
+    __name: "markdown-content",
+    props: {
+      content: { type: String, default: "" }
+    },
+    setup(__props, { expose: __expose }) {
+      __expose();
+      const props = __props;
+      const blocks = vue.computed(() => parseMarkdown(props.content));
+      function inlineSegments(text) {
+        return parseInline(text);
+      }
+      function tableMinWidth(block) {
+        var _a;
+        const cols = ((_a = block.headers) == null ? void 0 : _a.length) || 1;
+        return cols * 160 + "rpx";
+      }
+      const __returned__ = { props, blocks, inlineSegments, tableMinWidth, computed: vue.computed, get parseMarkdown() {
+        return parseMarkdown;
+      }, get parseInline() {
+        return parseInline;
+      } };
+      Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
+      return __returned__;
+    }
+  };
+  function _sfc_render$a(_ctx, _cache, $props, $setup, $data, $options) {
+    return vue.openBlock(), vue.createElementBlock("view", { class: "md-root" }, [
+      (vue.openBlock(true), vue.createElementBlock(
+        vue.Fragment,
+        null,
+        vue.renderList($setup.blocks, (block, bi) => {
+          return vue.openBlock(), vue.createElementBlock(
+            vue.Fragment,
+            { key: bi },
+            [
+              block.type === "h1" ? (vue.openBlock(), vue.createElementBlock("text", {
+                key: 0,
+                class: "md-h1"
+              }, [
+                (vue.openBlock(true), vue.createElementBlock(
+                  vue.Fragment,
+                  null,
+                  vue.renderList($setup.inlineSegments(block.text), (seg, si) => {
+                    return vue.openBlock(), vue.createElementBlock(
+                      "text",
+                      {
+                        key: "h1-" + si,
+                        class: vue.normalizeClass({ "md-bold": seg.bold })
+                      },
+                      vue.toDisplayString(seg.text),
+                      3
+                      /* TEXT, CLASS */
+                    );
+                  }),
+                  128
+                  /* KEYED_FRAGMENT */
+                ))
+              ])) : block.type === "h2" ? (vue.openBlock(), vue.createElementBlock("text", {
+                key: 1,
+                class: "md-h2"
+              }, [
+                (vue.openBlock(true), vue.createElementBlock(
+                  vue.Fragment,
+                  null,
+                  vue.renderList($setup.inlineSegments(block.text), (seg, si) => {
+                    return vue.openBlock(), vue.createElementBlock(
+                      "text",
+                      {
+                        key: "h2-" + si,
+                        class: vue.normalizeClass({ "md-bold": seg.bold })
+                      },
+                      vue.toDisplayString(seg.text),
+                      3
+                      /* TEXT, CLASS */
+                    );
+                  }),
+                  128
+                  /* KEYED_FRAGMENT */
+                ))
+              ])) : block.type === "h3" ? (vue.openBlock(), vue.createElementBlock("text", {
+                key: 2,
+                class: "md-h3"
+              }, [
+                (vue.openBlock(true), vue.createElementBlock(
+                  vue.Fragment,
+                  null,
+                  vue.renderList($setup.inlineSegments(block.text), (seg, si) => {
+                    return vue.openBlock(), vue.createElementBlock(
+                      "text",
+                      {
+                        key: "h3-" + si,
+                        class: vue.normalizeClass({ "md-bold": seg.bold })
+                      },
+                      vue.toDisplayString(seg.text),
+                      3
+                      /* TEXT, CLASS */
+                    );
+                  }),
+                  128
+                  /* KEYED_FRAGMENT */
+                ))
+              ])) : block.type === "hr" ? (vue.openBlock(), vue.createElementBlock("view", {
+                key: 3,
+                class: "md-hr"
+              })) : block.type === "list" ? (vue.openBlock(), vue.createElementBlock("view", {
+                key: 4,
+                class: "md-list"
+              }, [
+                (vue.openBlock(true), vue.createElementBlock(
+                  vue.Fragment,
+                  null,
+                  vue.renderList(block.items, (item, li) => {
+                    return vue.openBlock(), vue.createElementBlock("view", {
+                      key: li,
+                      class: "md-li"
+                    }, [
+                      vue.createElementVNode("text", { class: "md-li-dot" }, "•"),
+                      vue.createElementVNode("text", { class: "md-li-text" }, [
+                        (vue.openBlock(true), vue.createElementBlock(
+                          vue.Fragment,
+                          null,
+                          vue.renderList($setup.inlineSegments(item), (seg, si) => {
+                            return vue.openBlock(), vue.createElementBlock(
+                              "text",
+                              {
+                                key: si,
+                                class: vue.normalizeClass({ "md-bold": seg.bold })
+                              },
+                              vue.toDisplayString(seg.text),
+                              3
+                              /* TEXT, CLASS */
+                            );
+                          }),
+                          128
+                          /* KEYED_FRAGMENT */
+                        ))
+                      ])
+                    ]);
+                  }),
+                  128
+                  /* KEYED_FRAGMENT */
+                ))
+              ])) : block.type === "table" ? (vue.openBlock(), vue.createElementBlock("scroll-view", {
+                key: 5,
+                "scroll-x": "",
+                class: "md-table-scroll",
+                "show-scrollbar": false
+              }, [
+                vue.createElementVNode(
+                  "view",
+                  {
+                    class: "md-table",
+                    style: vue.normalizeStyle({ minWidth: $setup.tableMinWidth(block) })
+                  },
+                  [
+                    vue.createElementVNode("view", { class: "md-tr md-tr-head" }, [
+                      (vue.openBlock(true), vue.createElementBlock(
+                        vue.Fragment,
+                        null,
+                        vue.renderList(block.headers, (cell, ci) => {
+                          return vue.openBlock(), vue.createElementBlock("view", {
+                            key: "th-" + ci,
+                            class: "md-th"
+                          }, [
+                            vue.createElementVNode("text", { class: "md-cell" }, [
+                              (vue.openBlock(true), vue.createElementBlock(
+                                vue.Fragment,
+                                null,
+                                vue.renderList($setup.inlineSegments(cell), (seg, si) => {
+                                  return vue.openBlock(), vue.createElementBlock(
+                                    "text",
+                                    {
+                                      key: si,
+                                      class: vue.normalizeClass({ "md-bold": seg.bold })
+                                    },
+                                    vue.toDisplayString(seg.text),
+                                    3
+                                    /* TEXT, CLASS */
+                                  );
+                                }),
+                                128
+                                /* KEYED_FRAGMENT */
+                              ))
+                            ])
+                          ]);
+                        }),
+                        128
+                        /* KEYED_FRAGMENT */
+                      ))
+                    ]),
+                    (vue.openBlock(true), vue.createElementBlock(
+                      vue.Fragment,
+                      null,
+                      vue.renderList(block.rows, (row, ri) => {
+                        return vue.openBlock(), vue.createElementBlock(
+                          "view",
+                          {
+                            key: "tr-" + ri,
+                            class: vue.normalizeClass(["md-tr", { "md-tr-alt": ri % 2 === 1 }])
+                          },
+                          [
+                            (vue.openBlock(true), vue.createElementBlock(
+                              vue.Fragment,
+                              null,
+                              vue.renderList(row, (cell, ci) => {
+                                return vue.openBlock(), vue.createElementBlock("view", {
+                                  key: "td-" + ci,
+                                  class: "md-td"
+                                }, [
+                                  vue.createElementVNode("text", { class: "md-cell" }, [
+                                    (vue.openBlock(true), vue.createElementBlock(
+                                      vue.Fragment,
+                                      null,
+                                      vue.renderList($setup.inlineSegments(cell), (seg, si) => {
+                                        return vue.openBlock(), vue.createElementBlock(
+                                          "text",
+                                          {
+                                            key: si,
+                                            class: vue.normalizeClass({ "md-bold": seg.bold })
+                                          },
+                                          vue.toDisplayString(seg.text),
+                                          3
+                                          /* TEXT, CLASS */
+                                        );
+                                      }),
+                                      128
+                                      /* KEYED_FRAGMENT */
+                                    ))
+                                  ])
+                                ]);
+                              }),
+                              128
+                              /* KEYED_FRAGMENT */
+                            ))
+                          ],
+                          2
+                          /* CLASS */
+                        );
+                      }),
+                      128
+                      /* KEYED_FRAGMENT */
+                    ))
+                  ],
+                  4
+                  /* STYLE */
+                )
+              ])) : block.type === "p" ? (vue.openBlock(), vue.createElementBlock("text", {
+                key: 6,
+                class: "md-p"
+              }, [
+                (vue.openBlock(true), vue.createElementBlock(
+                  vue.Fragment,
+                  null,
+                  vue.renderList($setup.inlineSegments(block.text), (seg, si) => {
+                    return vue.openBlock(), vue.createElementBlock(
+                      "text",
+                      {
+                        key: "p-" + si,
+                        class: vue.normalizeClass({ "md-bold": seg.bold })
+                      },
+                      vue.toDisplayString(seg.text),
+                      3
+                      /* TEXT, CLASS */
+                    );
+                  }),
+                  128
+                  /* KEYED_FRAGMENT */
+                ))
+              ])) : vue.createCommentVNode("v-if", true)
+            ],
+            64
+            /* STABLE_FRAGMENT */
+          );
+        }),
+        128
+        /* KEYED_FRAGMENT */
+      ))
+    ]);
+  }
+  const __easycom_1 = /* @__PURE__ */ _export_sfc(_sfc_main$a, [["render", _sfc_render$a], ["__scopeId", "data-v-00310203"], ["__file", "E:/HTML/ai_grow/components/markdown-content/markdown-content.vue"]]);
   const store = vue.reactive({ unreadCount: 0 });
   function refreshUnreadCount() {
     if (!getAccessToken()) {
@@ -1069,7 +1356,7 @@ if (uni.restoreGlobal) {
     }
   }
   const MIN_RECORD_MS = 800;
-  const _sfc_main$8 = {
+  const _sfc_main$9 = {
     __name: "index",
     setup(__props, { expose: __expose }) {
       __expose();
@@ -1778,11 +2065,11 @@ if (uni.restoreGlobal) {
           return;
         recorderManager = uni.getRecorderManager();
         recorderManager.onStart(() => {
-          formatAppLog("log", "at pages/index/index.vue:1013", "recorderManager onStart");
+          formatAppLog("log", "at pages/index/index.vue:1017", "recorderManager onStart");
           isRecording.value = true;
         });
         recorderManager.onStop((res) => {
-          formatAppLog("log", "at pages/index/index.vue:1017", "recorderManager onStop:", JSON.stringify(res));
+          formatAppLog("log", "at pages/index/index.vue:1021", "recorderManager onStop:", JSON.stringify(res));
           isRecording.value = false;
           touchRecording = false;
           recordStarting = false;
@@ -1801,7 +2088,7 @@ if (uni.restoreGlobal) {
           }
         });
         recorderManager.onError((err) => {
-          formatAppLog("error", "at pages/index/index.vue:1035", "recorderManager onError:", JSON.stringify(err));
+          formatAppLog("error", "at pages/index/index.vue:1039", "recorderManager onError:", JSON.stringify(err));
           isRecording.value = false;
           touchRecording = false;
           recordStarting = false;
@@ -1964,7 +2251,7 @@ if (uni.restoreGlobal) {
         xhr.send(form);
       }
       function handleVoiceResult(filePath) {
-        formatAppLog("log", "at pages/index/index.vue:1193", "handleVoiceResult filePath:", filePath);
+        formatAppLog("log", "at pages/index/index.vue:1197", "handleVoiceResult filePath:", filePath);
         messages.value.push({
           role: "user",
           content: "[语音] 识别中...",
@@ -2118,14 +2405,16 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$7(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_markdown_content = resolveEasycom(vue.resolveDynamicComponent("markdown-content"), __easycom_0);
+  function _sfc_render$9(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_growth_task_mini_bar = resolveEasycom(vue.resolveDynamicComponent("growth-task-mini-bar"), __easycom_0);
+    const _component_markdown_content = resolveEasycom(vue.resolveDynamicComponent("markdown-content"), __easycom_1);
     return vue.openBlock(), vue.createElementBlock(
       "view",
       {
         class: vue.normalizeClass(["page", { "keyboard-open": $setup.keyboardHeight > 0 }])
       },
       [
+        vue.createVNode(_component_growth_task_mini_bar),
         vue.createElementVNode(
           "view",
           {
@@ -2208,68 +2497,23 @@ if (uni.restoreGlobal) {
                         key: 0,
                         class: "ai-loading-wrap"
                       }, [
-                        vue.createElementVNode("view", { class: "ai-reply-loader" }, [
-                          (vue.openBlock(), vue.createElementBlock("svg", {
-                            class: "circle-outer",
-                            viewBox: "0 0 86 86"
-                          }, [
-                            vue.createElementVNode("circle", {
-                              class: "back",
-                              cx: "43",
-                              cy: "43",
-                              r: "40",
-                              fill: "none"
-                            }),
-                            vue.createElementVNode("circle", {
-                              class: "front",
-                              cx: "43",
-                              cy: "43",
-                              r: "40",
-                              fill: "none"
-                            })
-                          ])),
-                          (vue.openBlock(), vue.createElementBlock("svg", {
-                            class: "circle-middle",
-                            viewBox: "0 0 60 60"
-                          }, [
-                            vue.createElementVNode("circle", {
-                              class: "back",
-                              cx: "30",
-                              cy: "30",
-                              r: "27",
-                              fill: "none"
-                            }),
-                            vue.createElementVNode("circle", {
-                              class: "front",
-                              cx: "30",
-                              cy: "30",
-                              r: "27",
-                              fill: "none"
-                            })
-                          ])),
-                          (vue.openBlock(), vue.createElementBlock("svg", {
-                            class: "circle-inner",
-                            viewBox: "0 0 34 34"
-                          }, [
-                            vue.createElementVNode("circle", {
-                              class: "back",
-                              cx: "17",
-                              cy: "17",
-                              r: "14",
-                              fill: "none"
-                            }),
-                            vue.createElementVNode("circle", {
-                              class: "front",
-                              cx: "17",
-                              cy: "17",
-                              r: "14",
-                              fill: "none"
-                            })
-                          ])),
-                          vue.createElementVNode("view", {
-                            class: "text",
-                            "data-text": "loading"
-                          })
+                        vue.createElementVNode("view", { class: "loader" }, [
+                          vue.createElementVNode("view", { class: "loader-ship" }, [
+                            vue.createElementVNode("view"),
+                            vue.createElementVNode("view"),
+                            vue.createElementVNode("view"),
+                            vue.createElementVNode("view"),
+                            vue.createElementVNode("view", { class: "base" }, [
+                              vue.createElementVNode("view")
+                            ]),
+                            vue.createElementVNode("view", { class: "face" })
+                          ]),
+                          vue.createElementVNode("view", { class: "longfazers" }, [
+                            vue.createElementVNode("view"),
+                            vue.createElementVNode("view"),
+                            vue.createElementVNode("view"),
+                            vue.createElementVNode("view")
+                          ])
                         ])
                       ])) : msg.type === "text" ? (vue.openBlock(), vue.createElementBlock("view", { key: 1 }, [
                         msg.title ? (vue.openBlock(), vue.createElementBlock(
@@ -2887,23 +3131,42 @@ if (uni.restoreGlobal) {
       /* CLASS */
     );
   }
-  const PagesIndexIndex = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["render", _sfc_render$7], ["__scopeId", "data-v-1cf27b2a"], ["__file", "E:/HTML/ai_grow/pages/index/index.vue"]]);
-  const _sfc_main$7 = {
+  const PagesIndexIndex = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["render", _sfc_render$9], ["__scopeId", "data-v-1cf27b2a"], ["__file", "E:/HTML/ai_grow/pages/index/index.vue"]]);
+  const _sfc_main$8 = {
     __name: "plans",
     setup(__props, { expose: __expose }) {
       __expose();
       const loaded = vue.ref(false);
+      const loadingTasks = vue.ref(false);
+      const startingTaskId = vue.ref(null);
+      let pollTimer = null;
+      let endRefreshTimer = null;
       const weeks = ["日", "一", "二", "三", "四", "五", "六"];
       const today = /* @__PURE__ */ new Date();
       const curYear = vue.ref(today.getFullYear());
       const curMonth = vue.ref(today.getMonth() + 1);
       const selectedDate = vue.ref(formatDate(today));
+      const dayTasks = vue.ref([]);
+      const datesWithTasks = vue.ref({});
+      const taskCount = vue.computed(() => dayTasks.value.length);
       vue.onMounted(() => {
         vue.nextTick(() => {
           setTimeout(() => {
             loaded.value = true;
           }, 50);
         });
+        loadTasksForDate(selectedDate.value);
+      });
+      onShow(() => {
+        if (selectedDate.value)
+          loadTasksForDate(selectedDate.value);
+      });
+      vue.onUnmounted(() => {
+        clearTaskTimers();
+      });
+      vue.watch(selectedDate, (date) => {
+        clearTaskTimers();
+        loadTasksForDate(date);
       });
       function formatDate(d) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -2920,35 +3183,187 @@ if (uni.restoreGlobal) {
         for (let d = 1; d <= daysInMonth; d++) {
           const full = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
           const isToday = full === formatDate(today);
-          const hasPlan = allPlans.value.some((p) => p.date === full);
+          const hasPlan = !!datesWithTasks.value[full];
           days.push({ day: d, full, isToday, hasPlan });
         }
         return days;
       });
-      const allPlans = vue.ref([
-        { id: 1, name: "晨会", time: "09:00 - 09:30", date: formatDate(today), color: "#7b6df0", done: false },
-        { id: 2, name: "开发任务", time: "10:00 - 12:00", date: formatDate(today), color: "#67c23a", done: false },
-        { id: 3, name: "午餐", time: "12:00 - 13:00", date: formatDate(today), color: "#e6a23c", done: true },
-        { id: 4, name: "项目复盘", time: "15:00 - 16:00", date: formatDate(today), color: "#f56c6c", done: false }
-      ]);
-      const addDays = (n) => {
-        const d = new Date(today);
-        d.setDate(d.getDate() + n);
-        return formatDate(d);
+      const FINAL_STATUS = ["COMPLETED", "SKIPPED", "INCOMPLETE"];
+      const STATUS_COLORS = {
+        COMPLETED: "#67c23a",
+        IN_PROGRESS: "#4facfe",
+        PENDING: "#7b6df0",
+        SKIPPED: "#c0c4cc",
+        INCOMPLETE: "#f56c6c"
       };
-      allPlans.value.push(
-        { id: 5, name: "会议", time: "10:00 - 11:00", date: addDays(1), color: "#7b6df0", done: false },
-        { id: 6, name: "健身", time: "14:00 - 15:30", date: addDays(1), color: "#67c23a", done: false },
-        { id: 7, name: "学习", time: "20:00 - 22:00", date: addDays(1), color: "#409eff", done: false },
-        { id: 8, name: "阅读", time: "08:00 - 09:00", date: addDays(3), color: "#e6a23c", done: false },
-        { id: 9, name: "团队周会", time: "10:00 - 11:30", date: addDays(5), color: "#f56c6c", done: false },
-        { id: 10, name: "健身", time: "18:00 - 19:30", date: addDays(5), color: "#67c23a", done: false },
-        { id: 11, name: "月度总结", time: "14:00 - 16:00", date: addDays(-2), color: "#7b6df0", done: true },
-        { id: 12, name: "需求评审", time: "10:00 - 11:00", date: addDays(-2), color: "#e6a23c", done: true }
-      );
-      const selectedPlans = vue.computed(() => {
-        return allPlans.value.filter((p) => p.date === selectedDate.value);
-      });
+      const STATUS_LABELS = {
+        PENDING: "待执行",
+        IN_PROGRESS: "进行中",
+        COMPLETED: "已完成",
+        SKIPPED: "已跳过",
+        INCOMPLETE: "未完成"
+      };
+      function formatTimeFromIso(iso) {
+        if (!iso)
+          return "";
+        const m = String(iso).match(/T(\d{2}):(\d{2})/);
+        return m ? `${m[1]}:${m[2]}` : "";
+      }
+      function isPlanActionDay(viewDate, scheduledDate) {
+        return viewDate === formatDate(today) && scheduledDate === viewDate;
+      }
+      function formatRemaining(plannedEndAt) {
+        if (!plannedEndAt)
+          return "进行中";
+        const end = new Date(plannedEndAt).getTime();
+        if (Number.isNaN(end))
+          return "进行中";
+        const min = Math.ceil((end - Date.now()) / 6e4);
+        if (min <= 0)
+          return "即将结束…";
+        return `进行中 · 约 ${min} 分钟后结束`;
+      }
+      function formatTaskTime(task, status) {
+        if (status === "INCOMPLETE")
+          return "已过期未完成";
+        if (status === "SKIPPED")
+          return "已跳过";
+        if (status === "IN_PROGRESS")
+          return formatRemaining(task.plannedEndAt);
+        const start = formatTimeFromIso(task.startedAt);
+        const end = formatTimeFromIso(task.plannedEndAt);
+        if (start && end)
+          return `${start} - ${end}`;
+        if (start)
+          return start;
+        if (task.estimatedMinutes)
+          return `约 ${task.estimatedMinutes} 分钟`;
+        return "";
+      }
+      function mapGrowthTask(task, viewDate) {
+        const status = task.status || "PENDING";
+        const scheduledDate = task.scheduledDate || viewDate;
+        const isFinal = FINAL_STATUS.includes(status);
+        const canActOnDay = isPlanActionDay(viewDate, scheduledDate);
+        const running = status === "IN_PROGRESS";
+        const done = status === "COMPLETED";
+        const skipped = status === "SKIPPED";
+        const incomplete = status === "INCOMPLETE";
+        const canStart = status === "PENDING" && canActOnDay;
+        const canCompleteEarly = running && canActOnDay;
+        const locked = isFinal || !canStart && !canCompleteEarly;
+        let metaIcon = "⏰";
+        if (running)
+          metaIcon = "⏳";
+        else if (incomplete)
+          metaIcon = "⚠️";
+        else if (skipped)
+          metaIcon = "⊘";
+        return {
+          id: task.id,
+          name: task.title || "未命名任务",
+          time: formatTaskTime(task, status),
+          date: scheduledDate,
+          color: STATUS_COLORS[status] || "#7b6df0",
+          done,
+          skipped,
+          incomplete,
+          running,
+          locked,
+          canStart,
+          canCompleteEarly,
+          canActOnDay,
+          status,
+          metaIcon,
+          description: task.description || "",
+          plannedEndAt: task.plannedEndAt || "",
+          startedAt: task.startedAt || "",
+          estimatedMinutes: task.estimatedMinutes
+        };
+      }
+      function toFocusTask(p) {
+        return {
+          id: p.id,
+          title: p.name,
+          description: p.description,
+          scheduledDate: p.date,
+          startedAt: p.startedAt,
+          plannedEndAt: p.plannedEndAt,
+          estimatedMinutes: p.estimatedMinutes,
+          status: "IN_PROGRESS"
+        };
+      }
+      function openFocusSession(p) {
+        openGrowthTaskFocusPage(toFocusTask(p));
+      }
+      function clearTaskTimers() {
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+        if (endRefreshTimer) {
+          clearTimeout(endRefreshTimer);
+          endRefreshTimer = null;
+        }
+      }
+      function scheduleTaskRefresh() {
+        clearTaskTimers();
+        const running = dayTasks.value.filter((t) => t.running && t.plannedEndAt);
+        if (!running.length)
+          return;
+        pollTimer = setInterval(() => {
+          loadTasksForDate(selectedDate.value, { silent: true });
+        }, 3e4);
+        let nearestEnd = Infinity;
+        for (const t of running) {
+          const end = new Date(t.plannedEndAt).getTime();
+          if (!Number.isNaN(end) && end > Date.now()) {
+            nearestEnd = Math.min(nearestEnd, end);
+          }
+        }
+        if (nearestEnd !== Infinity) {
+          endRefreshTimer = setTimeout(() => {
+            loadTasksForDate(selectedDate.value, { silent: true });
+          }, nearestEnd - Date.now() + 800);
+        }
+      }
+      function upsertDayTask(rawTask) {
+        if (!rawTask || rawTask.id == null)
+          return;
+        const mapped = mapGrowthTask(rawTask, selectedDate.value);
+        const i = dayTasks.value.findIndex((t) => t.id === mapped.id);
+        if (i >= 0) {
+          dayTasks.value = dayTasks.value.map((t, idx) => idx === i ? mapped : t);
+        } else {
+          dayTasks.value = [...dayTasks.value, mapped];
+        }
+        scheduleTaskRefresh();
+      }
+      async function loadTasksForDate(date, options = {}) {
+        if (!date)
+          return;
+        const { silent = false } = options;
+        if (!silent)
+          loadingTasks.value = true;
+        try {
+          const res = await getGrowthTasksByDate(date);
+          const list = (res.tasks || []).map((t) => mapGrowthTask(t, date));
+          dayTasks.value = list;
+          datesWithTasks.value = {
+            ...datesWithTasks.value,
+            [date]: (res.count != null ? res.count : list.length) > 0
+          };
+          scheduleTaskRefresh();
+        } catch (e) {
+          if (!silent) {
+            dayTasks.value = [];
+            uni.showToast({ title: e.message || "加载任务失败", icon: "none" });
+          }
+        } finally {
+          if (!silent)
+            loadingTasks.value = false;
+        }
+      }
       const selectedLabel = vue.computed(() => {
         if (!selectedDate.value)
           return "";
@@ -2977,8 +3392,94 @@ if (uni.restoreGlobal) {
           curMonth.value++;
         }
       }
-      function toggleDone(p) {
-        p.done = !p.done;
+      function lockedToast(p) {
+        if (p.incomplete) {
+          return "该任务已过期未完成，无法开始或完成";
+        }
+        if (p.skipped)
+          return "该任务已跳过";
+        if (p.done)
+          return "该任务已完成";
+        if (p.status === "PENDING" && !p.canActOnDay) {
+          return selectedDate.value === formatDate(today) ? "仅可在计划日当天操作" : "请切换到计划日当天再操作";
+        }
+        return "当前状态无法操作";
+      }
+      async function onCheckTap(p) {
+        if (p.locked) {
+          uni.showToast({ title: lockedToast(p), icon: "none" });
+          return;
+        }
+        if (startingTaskId.value)
+          return;
+        if (p.canCompleteEarly) {
+          openFocusSession(p);
+          return;
+        }
+        if (!p.canStart)
+          return;
+        startingTaskId.value = p.id;
+        try {
+          const updated = await startGrowthTask(p.id);
+          if (updated && updated.id != null) {
+            upsertDayTask(updated);
+            if (updated.status === "IN_PROGRESS") {
+              openGrowthTaskFocusPage(updated);
+              return;
+            }
+          } else {
+            await loadTasksForDate(selectedDate.value, { silent: true });
+            const running = dayTasks.value.find((t) => t.id === p.id && t.running);
+            if (running)
+              openFocusSession(running);
+            return;
+          }
+          uni.showToast({ title: "已开始执行", icon: "success" });
+        } catch (e) {
+          uni.showToast({ title: e.message || "开始失败", icon: "none" });
+        } finally {
+          startingTaskId.value = null;
+        }
+      }
+      async function submitComplete(p) {
+        if (startingTaskId.value)
+          return;
+        startingTaskId.value = p.id;
+        try {
+          const body = {};
+          if (p.estimatedMinutes)
+            body.actualMinutes = p.estimatedMinutes;
+          body.qualityScore = 4;
+          const updated = await completeGrowthTask(p.id, body);
+          if (updated && updated.id != null) {
+            upsertDayTask(updated);
+          } else {
+            await loadTasksForDate(selectedDate.value, { silent: true });
+          }
+          uni.showToast({ title: "已完成", icon: "success" });
+        } catch (e) {
+          const msg = e.code === "CONFLICT" || e.message && e.message.includes("409") ? "该任务无法完成" : e.message || "完成失败";
+          uni.showToast({ title: msg, icon: "none" });
+        } finally {
+          startingTaskId.value = null;
+        }
+      }
+      function onTaskTap(p) {
+        if (p.running) {
+          openFocusSession(p);
+          return;
+        }
+        const statusLabel = STATUS_LABELS[p.status] || p.status;
+        let hint = "";
+        if (p.canStart)
+          hint = "，点击 ▶ 开始";
+        else if (p.incomplete)
+          hint = "，已过期不可操作";
+        uni.showToast({
+          title: p.name + " · " + statusLabel + hint,
+          icon: "none",
+          duration: 2500
+        });
       }
       function goBack() {
         uni.navigateBack();
@@ -2986,13 +3487,31 @@ if (uni.restoreGlobal) {
       function addPlan() {
         uni.showToast({ title: "添加计划功能开发中", icon: "none" });
       }
-      const __returned__ = { loaded, weeks, today, curYear, curMonth, selectedDate, formatDate, calendarDays, allPlans, addDays, selectedPlans, selectedLabel, selectDate, prevMonth, nextMonth, toggleDone, goBack, addPlan, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted, nextTick: vue.nextTick };
+      const __returned__ = { loaded, loadingTasks, startingTaskId, get pollTimer() {
+        return pollTimer;
+      }, set pollTimer(v) {
+        pollTimer = v;
+      }, get endRefreshTimer() {
+        return endRefreshTimer;
+      }, set endRefreshTimer(v) {
+        endRefreshTimer = v;
+      }, weeks, today, curYear, curMonth, selectedDate, dayTasks, datesWithTasks, taskCount, formatDate, calendarDays, FINAL_STATUS, STATUS_COLORS, STATUS_LABELS, formatTimeFromIso, isPlanActionDay, formatRemaining, formatTaskTime, mapGrowthTask, toFocusTask, openFocusSession, clearTaskTimers, scheduleTaskRefresh, upsertDayTask, loadTasksForDate, selectedLabel, selectDate, prevMonth, nextMonth, lockedToast, onCheckTap, submitComplete, onTaskTap, goBack, addPlan, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted, onUnmounted: vue.onUnmounted, nextTick: vue.nextTick, watch: vue.watch, get onShow() {
+        return onShow;
+      }, get getGrowthTasksByDate() {
+        return getGrowthTasksByDate;
+      }, get startGrowthTask() {
+        return startGrowthTask;
+      }, get openGrowthTaskFocusPage() {
+        return openGrowthTaskFocusPage;
+      } };
       Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
       return __returned__;
     }
   };
-  function _sfc_render$6(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$8(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_growth_task_mini_bar = resolveEasycom(vue.resolveDynamicComponent("growth-task-mini-bar"), __easycom_0);
     return vue.openBlock(), vue.createElementBlock("view", { class: "plans-page" }, [
+      vue.createVNode(_component_growth_task_mini_bar),
       vue.createElementVNode("view", { class: "bg-decor" }, [
         vue.createElementVNode("view", { class: "bg-ball b1" }),
         vue.createElementVNode("view", { class: "bg-ball b2" })
@@ -3109,7 +3628,7 @@ if (uni.restoreGlobal) {
         vue.createElementVNode(
           "text",
           { class: "selected-count" },
-          vue.toDisplayString($setup.selectedPlans.length) + " 项计划",
+          vue.toDisplayString($setup.taskCount) + " 项任务",
           1
           /* TEXT */
         )
@@ -3121,81 +3640,395 @@ if (uni.restoreGlobal) {
         "show-scrollbar": false
       }, [
         vue.createElementVNode("view", { class: "plan-list" }, [
-          (vue.openBlock(true), vue.createElementBlock(
-            vue.Fragment,
-            null,
-            vue.renderList($setup.selectedPlans, (p, pi) => {
-              return vue.openBlock(), vue.createElementBlock(
-                "view",
-                {
-                  key: p.id,
-                  class: vue.normalizeClass(["plan-card", { show: $setup.loaded }]),
-                  style: vue.normalizeStyle({ transitionDelay: pi * 0.08 + "s" })
-                },
-                [
-                  vue.createElementVNode("view", { class: "plan-left" }, [
-                    vue.createElementVNode(
-                      "view",
-                      {
-                        class: "plan-color-bar",
-                        style: vue.normalizeStyle({ background: p.color })
-                      },
-                      null,
-                      4
-                      /* STYLE */
-                    ),
-                    vue.createElementVNode("view", { class: "plan-info" }, [
-                      vue.createElementVNode(
-                        "text",
-                        {
-                          class: vue.normalizeClass(["plan-name", { done: p.done }])
-                        },
-                        vue.toDisplayString(p.name),
-                        3
-                        /* TEXT, CLASS */
-                      ),
-                      vue.createElementVNode("view", { class: "plan-meta" }, [
-                        vue.createElementVNode("text", { style: { "font-size": "22rpx" } }, "⏰"),
-                        vue.createElementVNode(
-                          "text",
-                          { class: "plan-time" },
-                          vue.toDisplayString(p.time),
-                          1
-                          /* TEXT */
-                        )
-                      ])
-                    ])
-                  ]),
-                  vue.createElementVNode("view", {
-                    class: vue.normalizeClass(["plan-check", { done: p.done }]),
-                    onClick: ($event) => $setup.toggleDone(p)
-                  }, [
-                    p.done ? (vue.openBlock(), vue.createElementBlock("text", {
-                      key: 0,
-                      style: { "font-size": "28rpx", "color": "#fff" }
-                    }, "✔")) : vue.createCommentVNode("v-if", true)
-                  ], 10, ["onClick"])
-                ],
-                6
-                /* CLASS, STYLE */
-              );
-            }),
-            128
-            /* KEYED_FRAGMENT */
-          )),
-          $setup.selectedPlans.length === 0 ? (vue.openBlock(), vue.createElementBlock("view", {
+          $setup.loadingTasks ? (vue.openBlock(), vue.createElementBlock("view", {
             key: 0,
             class: "empty"
           }, [
-            vue.createElementVNode("text", { style: { "font-size": "60rpx", "opacity": "0.3" } }, "📅"),
-            vue.createElementVNode("text", { class: "empty-text" }, "这一天还没有计划"),
-            vue.createElementVNode("text", { class: "empty-sub" }, "点击右上角 + 添加")
-          ])) : vue.createCommentVNode("v-if", true)
+            vue.createElementVNode("text", { class: "empty-text" }, "加载中...")
+          ])) : (vue.openBlock(), vue.createElementBlock(
+            vue.Fragment,
+            { key: 1 },
+            [
+              (vue.openBlock(true), vue.createElementBlock(
+                vue.Fragment,
+                null,
+                vue.renderList($setup.dayTasks, (p, pi) => {
+                  return vue.openBlock(), vue.createElementBlock("view", {
+                    key: p.id,
+                    class: vue.normalizeClass(["plan-card", { show: $setup.loaded, locked: p.locked }]),
+                    style: vue.normalizeStyle({ transitionDelay: pi * 0.08 + "s" }),
+                    onClick: ($event) => $setup.onTaskTap(p)
+                  }, [
+                    vue.createElementVNode("view", { class: "plan-left" }, [
+                      vue.createElementVNode(
+                        "view",
+                        {
+                          class: "plan-color-bar",
+                          style: vue.normalizeStyle({ background: p.color })
+                        },
+                        null,
+                        4
+                        /* STYLE */
+                      ),
+                      vue.createElementVNode("view", { class: "plan-info" }, [
+                        vue.createElementVNode(
+                          "text",
+                          {
+                            class: vue.normalizeClass(["plan-name", { done: p.done, incomplete: p.incomplete, skipped: p.skipped }])
+                          },
+                          vue.toDisplayString(p.name),
+                          3
+                          /* TEXT, CLASS */
+                        ),
+                        vue.createElementVNode("view", { class: "plan-meta" }, [
+                          vue.createElementVNode(
+                            "text",
+                            { style: { "font-size": "22rpx" } },
+                            vue.toDisplayString(p.metaIcon),
+                            1
+                            /* TEXT */
+                          ),
+                          vue.createElementVNode(
+                            "text",
+                            { class: "plan-time" },
+                            vue.toDisplayString(p.time),
+                            1
+                            /* TEXT */
+                          )
+                        ])
+                      ])
+                    ]),
+                    vue.createElementVNode("view", {
+                      class: vue.normalizeClass(["plan-check", {
+                        done: p.done,
+                        running: p.running,
+                        locked: p.locked && !p.done,
+                        skipped: p.skipped,
+                        incomplete: p.incomplete,
+                        starting: $setup.startingTaskId === p.id
+                      }]),
+                      onClick: vue.withModifiers(($event) => $setup.onCheckTap(p), ["stop"])
+                    }, [
+                      p.done ? (vue.openBlock(), vue.createElementBlock("text", {
+                        key: 0,
+                        style: { "font-size": "28rpx", "color": "#fff" }
+                      }, "✔")) : p.skipped ? (vue.openBlock(), vue.createElementBlock("text", {
+                        key: 1,
+                        class: "check-label"
+                      }, "跳")) : p.incomplete ? (vue.openBlock(), vue.createElementBlock("text", {
+                        key: 2,
+                        class: "check-label muted"
+                      }, "—")) : p.running ? (vue.openBlock(), vue.createElementBlock("view", {
+                        key: 3,
+                        class: "check-pulse"
+                      })) : p.canStart ? (vue.openBlock(), vue.createElementBlock("text", {
+                        key: 4,
+                        style: { "font-size": "28rpx", "color": "#4facfe" }
+                      }, "▶")) : (vue.openBlock(), vue.createElementBlock("text", {
+                        key: 5,
+                        class: "check-label muted"
+                      }, "—"))
+                    ], 10, ["onClick"])
+                  ], 14, ["onClick"]);
+                }),
+                128
+                /* KEYED_FRAGMENT */
+              )),
+              $setup.dayTasks.length === 0 ? (vue.openBlock(), vue.createElementBlock("view", {
+                key: 0,
+                class: "empty"
+              }, [
+                vue.createElementVNode("text", { style: { "font-size": "60rpx", "opacity": "0.3" } }, "📅"),
+                vue.createElementVNode("text", { class: "empty-text" }, "这一天还没有任务"),
+                vue.createElementVNode("text", { class: "empty-sub" }, "与 AI 对话确认成长计划后自动生成")
+              ])) : vue.createCommentVNode("v-if", true)
+            ],
+            64
+            /* STABLE_FRAGMENT */
+          ))
         ])
       ])
     ]);
   }
-  const PagesPlansPlans = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["render", _sfc_render$6], ["__scopeId", "data-v-80c07444"], ["__file", "E:/HTML/ai_grow/pages/plans/plans.vue"]]);
+  const PagesPlansPlans = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["render", _sfc_render$8], ["__scopeId", "data-v-80c07444"], ["__file", "E:/HTML/ai_grow/pages/plans/plans.vue"]]);
+  const _sfc_main$7 = {
+    __name: "growth-task-focus",
+    setup(__props, { expose: __expose }) {
+      __expose();
+      const statusBarHeight = vue.ref(20);
+      const playing = vue.ref(true);
+      const completing = vue.ref(false);
+      vue.onMounted(() => {
+        const sys = uni.getSystemInfoSync();
+        statusBarHeight.value = sys.statusBarHeight || 20;
+      });
+      onShow(() => {
+        growthTaskSession.onFocusPage = true;
+        growthTaskSession.minimized = false;
+        if (growthTaskSession.task) {
+          refreshActiveGrowthTask();
+        }
+      });
+      onHide(() => {
+        var _a;
+        if (growthTaskSession.active && ((_a = growthTaskSession.task) == null ? void 0 : _a.status) === "IN_PROGRESS") {
+          growthTaskSession.onFocusPage = false;
+          growthTaskSession.minimized = true;
+        }
+      });
+      vue.onUnmounted(() => {
+        if (growthTaskSession.active && !growthTaskSession.minimized) {
+          growthTaskSession.onFocusPage = false;
+        }
+      });
+      const hasTask = vue.computed(() => growthTaskSession.active && !!growthTaskSession.task);
+      const taskTitle = vue.computed(() => {
+        var _a;
+        return ((_a = growthTaskSession.task) == null ? void 0 : _a.title) || "";
+      });
+      const taskDesc = vue.computed(() => {
+        var _a;
+        const d = ((_a = growthTaskSession.task) == null ? void 0 : _a.description) || "";
+        return d.length > 60 ? d.slice(0, 60) + "…" : d;
+      });
+      const countdown = vue.computed(() => {
+        void growthTaskSession.tick;
+        return formatCountdown(getRemainingMs());
+      });
+      const progress = vue.computed(() => {
+        void growthTaskSession.tick;
+        return getProgressPercent();
+      });
+      const quote = vue.computed(() => getCurrentQuote());
+      const elapsedLabel = vue.computed(() => {
+        void growthTaskSession.tick;
+        return formatCountdown(getElapsedMs());
+      });
+      const totalLabel = vue.computed(() => {
+        void growthTaskSession.tick;
+        const task = growthTaskSession.task;
+        if (!(task == null ? void 0 : task.startedAt) || !(task == null ? void 0 : task.plannedEndAt)) {
+          return (task == null ? void 0 : task.estimatedMinutes) ? `${task.estimatedMinutes}:00` : "--:--";
+        }
+        const start = new Date(task.startedAt).getTime();
+        const end = new Date(task.plannedEndAt).getTime();
+        if (Number.isNaN(start) || Number.isNaN(end))
+          return "--:--";
+        return formatCountdown(end - start);
+      });
+      function goBack() {
+        uni.navigateBack({
+          fail: () => uni.reLaunch({ url: "/pages/plans/plans" })
+        });
+      }
+      function onMinimize() {
+        minimizeGrowthTask();
+        goBack();
+      }
+      async function onComplete() {
+        const task = growthTaskSession.task;
+        if (!task || completing.value)
+          return;
+        uni.showModal({
+          title: "提前完成",
+          content: "确认现在完成这项任务吗？",
+          success: async (res) => {
+            if (!res.confirm)
+              return;
+            completing.value = true;
+            try {
+              const body = { qualityScore: 4 };
+              if (task.estimatedMinutes)
+                body.actualMinutes = task.estimatedMinutes;
+              await completeGrowthTask$1(task.id, body);
+              clearActiveGrowthTask();
+              uni.showToast({ title: "已完成", icon: "success" });
+              setTimeout(() => goBack(), 400);
+            } catch (e) {
+              uni.showToast({ title: e.message || "完成失败", icon: "none" });
+            } finally {
+              completing.value = false;
+            }
+          }
+        });
+      }
+      const __returned__ = { statusBarHeight, playing, completing, hasTask, taskTitle, taskDesc, countdown, progress, quote, elapsedLabel, totalLabel, goBack, onMinimize, onComplete, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted, onUnmounted: vue.onUnmounted, get onShow() {
+        return onShow;
+      }, get onHide() {
+        return onHide;
+      }, get completeGrowthTask() {
+        return completeGrowthTask$1;
+      }, get growthTaskSession() {
+        return growthTaskSession;
+      }, get clearActiveGrowthTask() {
+        return clearActiveGrowthTask;
+      }, get minimizeGrowthTask() {
+        return minimizeGrowthTask;
+      }, get getRemainingMs() {
+        return getRemainingMs;
+      }, get getElapsedMs() {
+        return getElapsedMs;
+      }, get getProgressPercent() {
+        return getProgressPercent;
+      }, get formatCountdown() {
+        return formatCountdown;
+      }, get getCurrentQuote() {
+        return getCurrentQuote;
+      }, get refreshActiveGrowthTask() {
+        return refreshActiveGrowthTask;
+      } };
+      Object.defineProperty(__returned__, "__isScriptSetup", { enumerable: false, value: true });
+      return __returned__;
+    }
+  };
+  function _sfc_render$7(_ctx, _cache, $props, $setup, $data, $options) {
+    return vue.openBlock(), vue.createElementBlock("view", { class: "focus-page" }, [
+      vue.createElementVNode("view", { class: "bg-glow g1" }),
+      vue.createElementVNode("view", { class: "bg-glow g2" }),
+      vue.createElementVNode(
+        "view",
+        {
+          class: "top-bar",
+          style: vue.normalizeStyle({ paddingTop: $setup.statusBarHeight + "px" })
+        },
+        [
+          vue.createElementVNode("view", {
+            class: "top-btn",
+            onClick: $setup.onMinimize
+          }, [
+            vue.createElementVNode("text", { class: "top-btn-icon" }, "⌄"),
+            vue.createElementVNode("text", { class: "top-btn-txt" }, "退出")
+          ]),
+          vue.createElementVNode("text", { class: "top-label" }, "专注进行中"),
+          vue.createElementVNode("view", { class: "top-btn ghost" })
+        ],
+        4
+        /* STYLE */
+      ),
+      $setup.hasTask ? (vue.openBlock(), vue.createElementBlock("view", {
+        key: 0,
+        class: "player-body"
+      }, [
+        vue.createElementVNode("view", { class: "disc-wrap" }, [
+          vue.createElementVNode("view", { class: "disc-glow" }),
+          vue.createElementVNode(
+            "view",
+            {
+              class: vue.normalizeClass(["disc", { spinning: $setup.playing }])
+            },
+            [
+              vue.createElementVNode("view", { class: "disc-inner" }, [
+                vue.createElementVNode("text", { class: "disc-emoji" }, "🎯")
+              ])
+            ],
+            2
+            /* CLASS */
+          )
+        ]),
+        vue.createElementVNode(
+          "text",
+          { class: "task-title" },
+          vue.toDisplayString($setup.taskTitle),
+          1
+          /* TEXT */
+        ),
+        $setup.taskDesc ? (vue.openBlock(), vue.createElementBlock(
+          "text",
+          {
+            key: 0,
+            class: "task-desc"
+          },
+          vue.toDisplayString($setup.taskDesc),
+          1
+          /* TEXT */
+        )) : vue.createCommentVNode("v-if", true),
+        vue.createElementVNode(
+          "text",
+          { class: "countdown" },
+          vue.toDisplayString($setup.countdown),
+          1
+          /* TEXT */
+        ),
+        vue.createElementVNode("text", { class: "countdown-label" }, "剩余时间"),
+        vue.createElementVNode("view", { class: "progress-block" }, [
+          vue.createElementVNode("view", { class: "progress-track" }, [
+            vue.createElementVNode(
+              "view",
+              {
+                class: "progress-fill",
+                style: vue.normalizeStyle({ width: $setup.progress + "%" })
+              },
+              null,
+              4
+              /* STYLE */
+            ),
+            vue.createElementVNode(
+              "view",
+              {
+                class: "progress-thumb",
+                style: vue.normalizeStyle({ left: $setup.progress + "%" })
+              },
+              null,
+              4
+              /* STYLE */
+            )
+          ]),
+          vue.createElementVNode("view", { class: "progress-times" }, [
+            vue.createElementVNode(
+              "text",
+              null,
+              vue.toDisplayString($setup.elapsedLabel),
+              1
+              /* TEXT */
+            ),
+            vue.createElementVNode(
+              "text",
+              null,
+              vue.toDisplayString($setup.totalLabel),
+              1
+              /* TEXT */
+            )
+          ])
+        ]),
+        vue.createElementVNode("view", { class: "quote-card" }, [
+          vue.createElementVNode("text", { class: "quote-mark" }, '"'),
+          vue.createElementVNode(
+            "text",
+            { class: "quote-text" },
+            vue.toDisplayString($setup.quote),
+            1
+            /* TEXT */
+          )
+        ]),
+        vue.createElementVNode("view", { class: "actions" }, [
+          vue.createElementVNode("view", {
+            class: "action-btn secondary",
+            onClick: $setup.onMinimize
+          }, [
+            vue.createElementVNode("text", null, "最小化")
+          ]),
+          vue.createElementVNode("view", {
+            class: "action-btn primary",
+            onClick: $setup.onComplete
+          }, [
+            vue.createElementVNode("text", null, "提前完成")
+          ])
+        ])
+      ])) : (vue.openBlock(), vue.createElementBlock("view", {
+        key: 1,
+        class: "empty-body"
+      }, [
+        vue.createElementVNode("text", { class: "empty-txt" }, "暂无进行中的任务"),
+        vue.createElementVNode("view", {
+          class: "action-btn primary solo",
+          onClick: $setup.goBack
+        }, [
+          vue.createElementVNode("text", null, "返回")
+        ])
+      ]))
+    ]);
+  }
+  const PagesGrowthTaskFocusGrowthTaskFocus = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["render", _sfc_render$7], ["__scopeId", "data-v-afd4bbba"], ["__file", "E:/HTML/ai_grow/pages/growth-task-focus/growth-task-focus.vue"]]);
   const _sfc_main$6 = {
     __name: "login",
     setup(__props, { expose: __expose }) {
@@ -3302,7 +4135,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$5(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$6(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "login-page" }, [
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
@@ -3611,7 +4444,7 @@ if (uni.restoreGlobal) {
       )
     ]);
   }
-  const PagesLoginLogin = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["render", _sfc_render$5], ["__scopeId", "data-v-e4e4508d"], ["__file", "E:/HTML/ai_grow/pages/login/login.vue"]]);
+  const PagesLoginLogin = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["render", _sfc_render$6], ["__scopeId", "data-v-e4e4508d"], ["__file", "E:/HTML/ai_grow/pages/login/login.vue"]]);
   const _sfc_main$5 = {
     __name: "register",
     setup(__props, { expose: __expose }) {
@@ -3689,7 +4522,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$4(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$5(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "register-page" }, [
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
@@ -3834,7 +4667,7 @@ if (uni.restoreGlobal) {
       )
     ]);
   }
-  const PagesRegisterRegister = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["render", _sfc_render$4], ["__scopeId", "data-v-bac4a35d"], ["__file", "E:/HTML/ai_grow/pages/register/register.vue"]]);
+  const PagesRegisterRegister = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["render", _sfc_render$5], ["__scopeId", "data-v-bac4a35d"], ["__file", "E:/HTML/ai_grow/pages/register/register.vue"]]);
   const _sfc_main$4 = {
     __name: "forgot",
     setup(__props, { expose: __expose }) {
@@ -3973,7 +4806,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$3(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$4(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "forgot-page" }, [
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
@@ -4317,7 +5150,7 @@ if (uni.restoreGlobal) {
       )
     ]);
   }
-  const PagesForgotForgot = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["render", _sfc_render$3], ["__scopeId", "data-v-51689b0a"], ["__file", "E:/HTML/ai_grow/pages/forgot/forgot.vue"]]);
+  const PagesForgotForgot = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["render", _sfc_render$4], ["__scopeId", "data-v-51689b0a"], ["__file", "E:/HTML/ai_grow/pages/forgot/forgot.vue"]]);
   const _sfc_main$3 = {
     __name: "profile",
     setup(__props, { expose: __expose }) {
@@ -4503,7 +5336,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$2(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$3(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "profile-page" }, [
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
@@ -4768,7 +5601,7 @@ if (uni.restoreGlobal) {
       ])) : vue.createCommentVNode("v-if", true)
     ]);
   }
-  const PagesProfileProfile = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["render", _sfc_render$2], ["__scopeId", "data-v-dd383ca2"], ["__file", "E:/HTML/ai_grow/pages/profile/profile.vue"]]);
+  const PagesProfileProfile = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["render", _sfc_render$3], ["__scopeId", "data-v-dd383ca2"], ["__file", "E:/HTML/ai_grow/pages/profile/profile.vue"]]);
   const _sfc_main$2 = {
     __name: "tasks",
     setup(__props, { expose: __expose }) {
@@ -4857,7 +5690,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$1(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$2(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "tasks-page" }, [
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
@@ -5010,7 +5843,7 @@ if (uni.restoreGlobal) {
       ], 40, ["refresher-triggered"])
     ]);
   }
-  const PagesTasksTasks = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["render", _sfc_render$1], ["__scopeId", "data-v-027feebf"], ["__file", "E:/HTML/ai_grow/pages/tasks/tasks.vue"]]);
+  const PagesTasksTasks = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["render", _sfc_render$2], ["__scopeId", "data-v-027feebf"], ["__file", "E:/HTML/ai_grow/pages/tasks/tasks.vue"]]);
   function toStr(v) {
     if (v == null || v === "")
       return null;
@@ -5231,7 +6064,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$1(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "notify-page" }, [
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
@@ -5404,9 +6237,10 @@ if (uni.restoreGlobal) {
       ], 40, ["refresher-triggered"])
     ]);
   }
-  const PagesNotificationsNotifications = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["render", _sfc_render], ["__scopeId", "data-v-e30a2353"], ["__file", "E:/HTML/ai_grow/pages/notifications/notifications.vue"]]);
+  const PagesNotificationsNotifications = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["render", _sfc_render$1], ["__scopeId", "data-v-e30a2353"], ["__file", "E:/HTML/ai_grow/pages/notifications/notifications.vue"]]);
   __definePage("pages/index/index", PagesIndexIndex);
   __definePage("pages/plans/plans", PagesPlansPlans);
+  __definePage("pages/growth-task-focus/growth-task-focus", PagesGrowthTaskFocusGrowthTaskFocus);
   __definePage("pages/login/login", PagesLoginLogin);
   __definePage("pages/register/register", PagesRegisterRegister);
   __definePage("pages/forgot/forgot", PagesForgotForgot);
@@ -5645,7 +6479,11 @@ if (uni.restoreGlobal) {
       }
     }
   };
-  const App = /* @__PURE__ */ _export_sfc(_sfc_main, [["__file", "E:/HTML/ai_grow/App.vue"]]);
+  function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_growth_task_mini_bar = resolveEasycom(vue.resolveDynamicComponent("growth-task-mini-bar"), __easycom_0);
+    return vue.openBlock(), vue.createBlock(_component_growth_task_mini_bar);
+  }
+  const App = /* @__PURE__ */ _export_sfc(_sfc_main, [["render", _sfc_render], ["__file", "E:/HTML/ai_grow/App.vue"]]);
   function createApp() {
     const app = vue.createVueApp(App);
     return {

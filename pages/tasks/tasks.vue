@@ -1,5 +1,6 @@
 <template>
   <view class="tasks-page">
+    <growth-task-mini-bar />
     <view class="bg-bubbles">
       <view class="bubble b1"></view>
       <view class="bubble b2"></view>
