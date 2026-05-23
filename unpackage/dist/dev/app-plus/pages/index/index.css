@@ -192,29 +192,36 @@
  *   .ai-loading-wrap > .loader > view / .longfazers
  */
 .ai-loading-wrap {
-  position: relative;
-  width: 3.75rem;
-  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 6.25rem;
+  min-height: 3.125rem;
   margin: 0 auto;
-  overflow: hidden;
+  padding: 0.25rem 0.125rem;
+  box-sizing: border-box;
+  overflow: visible;
 }
 
-/* From Uiverse.io by anand_4957 — scale 缩小，绝对定位不占满气泡布局 */
+/* From Uiverse.io by anand_4957 */
 .ai-loading-wrap .loader {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 140px;
-  height: 48px;
-  overflow: hidden;
-  transform: translate(-50%, -50%) scale(0.42);
+  position: relative;
+  width: 150px;
+  height: 58px;
+  flex-shrink: 0;
+  overflow: visible;
+  transform: scale(0.48);
   transform-origin: center center;
 }
+
+/* 下移飞船，为顶部 face/base 伪元素留出空间，避免被裁切 */
 .ai-loading-wrap .loader-ship {
+  position: absolute;
+  left: 10px;
+  top: 24px;
   height: 5px;
   width: 35px;
   background: #4f29f0;
-  position: relative;
   border-radius: 2px 10px 1px 0;
   animation: speeder 0.4s linear infinite;
 }
@@ -495,6 +502,7 @@ body[data-v-1cf27b2a] { height: 100%; background: linear-gradient(180deg, #e8f4f
 .card-ai[data-v-1cf27b2a] {
   background: #fff; border-radius: 0.5rem; padding: 0.6875rem; max-width: 88%;
   box-shadow: 0 0.0625rem 0.3125rem rgba(79,172,254,0.06);
+  overflow: visible;
 }
 .ai-avatar[data-v-1cf27b2a] {
   flex-shrink: 0;

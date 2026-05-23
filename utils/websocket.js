@@ -35,9 +35,12 @@ function connect(force = false) {
 
   socketTask.onMessage((res) => {
     try {
-      const data = JSON.parse(res.data)
+      let data = res.data
+      if (typeof data === 'string') data = JSON.parse(data)
       listeners.forEach(fn => fn(data))
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[ws] message parse failed', e)
+    }
   })
 
   socketTask.onClose(() => {

@@ -438,6 +438,15 @@ export function getGrowthTasksByDate(date) {
   })
 }
 
+// 用户本地「今天」：tasks（计划任务）+ assistantTasks（单纯提醒）
+export function getGrowthTasksToday() {
+  return request({
+    url: '/api/v1/users/me/growth-tasks/today',
+    method: 'GET',
+    auth: true
+  })
+}
+
 // 开始执行任务（后端根据 estimatedMinutes 计算 plannedEndAt，到期自动结束）
 export function startGrowthTask(taskId) {
   return request({

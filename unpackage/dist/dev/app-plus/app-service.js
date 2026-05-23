@@ -544,6 +544,13 @@ if (uni.restoreGlobal) {
       auth: true
     });
   }
+  function getGrowthTasksToday() {
+    return request({
+      url: "/api/v1/users/me/growth-tasks/today",
+      method: "GET",
+      auth: true
+    });
+  }
   function startGrowthTask(taskId) {
     return request({
       url: "/api/v1/users/me/growth-tasks/" + taskId + "/start",
@@ -552,7 +559,7 @@ if (uni.restoreGlobal) {
       auth: true
     });
   }
-  function completeGrowthTask$1(taskId, data = {}) {
+  function completeGrowthTask(taskId, data = {}) {
     return request({
       url: "/api/v1/users/me/growth-tasks/" + taskId + "/complete",
       method: "POST",
@@ -814,7 +821,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$b(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$a(_ctx, _cache, $props, $setup, $data, $options) {
     return $setup.visible ? (vue.openBlock(), vue.createElementBlock(
       "view",
       {
@@ -861,7 +868,7 @@ if (uni.restoreGlobal) {
       /* STYLE */
     )) : vue.createCommentVNode("v-if", true);
   }
-  const __easycom_0 = /* @__PURE__ */ _export_sfc(_sfc_main$b, [["render", _sfc_render$b], ["__scopeId", "data-v-b052acc1"], ["__file", "E:/HTML/ai_grow/components/growth-task-mini-bar/growth-task-mini-bar.vue"]]);
+  const __easycom_0 = /* @__PURE__ */ _export_sfc(_sfc_main$b, [["render", _sfc_render$a], ["__scopeId", "data-v-b052acc1"], ["__file", "E:/HTML/ai_grow/components/growth-task-mini-bar/growth-task-mini-bar.vue"]]);
   function isTableRow(line) {
     return line.startsWith("|") && line.includes("|");
   }
@@ -985,7 +992,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$a(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$9(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "md-root" }, [
       (vue.openBlock(true), vue.createElementBlock(
         vue.Fragment,
@@ -1239,7 +1246,7 @@ if (uni.restoreGlobal) {
       ))
     ]);
   }
-  const __easycom_1 = /* @__PURE__ */ _export_sfc(_sfc_main$a, [["render", _sfc_render$a], ["__scopeId", "data-v-00310203"], ["__file", "E:/HTML/ai_grow/components/markdown-content/markdown-content.vue"]]);
+  const __easycom_1 = /* @__PURE__ */ _export_sfc(_sfc_main$a, [["render", _sfc_render$9], ["__scopeId", "data-v-00310203"], ["__file", "E:/HTML/ai_grow/components/markdown-content/markdown-content.vue"]]);
   const store = vue.reactive({ unreadCount: 0 });
   function refreshUnreadCount() {
     if (!getAccessToken()) {
@@ -1292,6 +1299,80 @@ if (uni.restoreGlobal) {
     } catch (e) {
     }
   }
+  function toStr(v) {
+    if (v == null || v === "")
+      return null;
+    return String(v);
+  }
+  function normalizePushPayload(raw) {
+    if (!raw)
+      return null;
+    let data = raw;
+    if (typeof raw === "string") {
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+    if (data.payload)
+      data = data.payload;
+    if (typeof data === "string") {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        return null;
+      }
+    }
+    const type = data.type || data.msgType;
+    if (!type)
+      return null;
+    return {
+      type,
+      notificationId: data.notificationId != null ? Number(data.notificationId) : null,
+      sessionId: data.sessionId != null ? Number(data.sessionId) : null,
+      messageId: data.messageId != null ? Number(data.messageId) : null,
+      taskId: data.taskId != null && data.taskId !== "" ? Number(data.taskId) : null,
+      title: data.title || "",
+      body: data.body || "",
+      unreadCount: data.unreadCount != null ? Number(data.unreadCount) : void 0
+    };
+  }
+  function stashPendingSession(sessionId) {
+    if (sessionId == null)
+      return;
+    uni.setStorageSync("pendingOpenSessionId", toStr(sessionId));
+  }
+  function navigateFromPushPayload(raw) {
+    const data = normalizePushPayload(raw);
+    if (!data)
+      return;
+    if (data.unreadCount !== void 0 && !isNaN(data.unreadCount)) {
+      store.unreadCount = data.unreadCount;
+    }
+    if (data.notificationId && getAccessToken()) {
+      markNotificationRead(data.notificationId).then(() => refreshUnreadCount()).catch(() => {
+      });
+    }
+    switch (data.type) {
+      case "CHAT_REPLY":
+      case "WEEKLY_COMPANION_DIGEST":
+      case "TASK_DUE_REMINDER":
+        if (data.sessionId != null) {
+          stashPendingSession(data.sessionId);
+          uni.reLaunch({ url: "/pages/index/index" });
+          return;
+        }
+        if (data.taskId != null) {
+          uni.navigateTo({ url: "/pages/tasks/tasks?status=OPEN" });
+          return;
+        }
+        if (data.type !== "CHAT_REPLY") {
+          uni.navigateTo({ url: "/pages/notifications/notifications" });
+        }
+        break;
+    }
+  }
   const chatReplyListeners = [];
   const notifyListeners = [];
   function onChatReply(fn) {
@@ -1318,14 +1399,28 @@ if (uni.restoreGlobal) {
       }
     });
   }
-  function handleRealtimeMessage(data) {
-    if (!data)
+  function parseRealtimeRaw(raw) {
+    if (!raw)
+      return null;
+    if (typeof raw === "string") {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+    return raw;
+  }
+  function handleRealtimeMessage(raw) {
+    const incoming = parseRealtimeRaw(raw);
+    if (!incoming)
       return;
-    if (data.unreadCount !== void 0 && data.type == null) {
-      store.unreadCount = Number(data.unreadCount) || 0;
+    if (incoming.unreadCount !== void 0 && (incoming.type == null || incoming.type === "")) {
+      store.unreadCount = Number(incoming.unreadCount) || 0;
       return;
     }
-    if (!data.type)
+    const data = normalizePushPayload(incoming);
+    if (!data || !data.type)
       return;
     switch (data.type) {
       case "TASK_DUE_REMINDER":
@@ -1337,9 +1432,11 @@ if (uni.restoreGlobal) {
         }
         emitNotifyChange();
         playNotificationSound();
-        if (data.title) {
-          uni.showToast({ title: data.title, icon: "none", duration: 2500 });
-        }
+        uni.showToast({
+          title: data.title || (data.type === "WEEKLY_COMPANION_DIGEST" ? "本周回顾" : "任务提醒"),
+          icon: "none",
+          duration: 2800
+        });
         break;
       case "CHAT_REPLY":
         if (data.unreadCount !== void 0) {
@@ -2405,7 +2502,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$9(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$8(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_growth_task_mini_bar = resolveEasycom(vue.resolveDynamicComponent("growth-task-mini-bar"), __easycom_0);
     const _component_markdown_content = resolveEasycom(vue.resolveDynamicComponent("markdown-content"), __easycom_1);
     return vue.openBlock(), vue.createElementBlock(
@@ -3131,7 +3228,7 @@ if (uni.restoreGlobal) {
       /* CLASS */
     );
   }
-  const PagesIndexIndex = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["render", _sfc_render$9], ["__scopeId", "data-v-1cf27b2a"], ["__file", "E:/HTML/ai_grow/pages/index/index.vue"]]);
+  const PagesIndexIndex = /* @__PURE__ */ _export_sfc(_sfc_main$9, [["render", _sfc_render$8], ["__scopeId", "data-v-1cf27b2a"], ["__file", "E:/HTML/ai_grow/pages/index/index.vue"]]);
   const _sfc_main$8 = {
     __name: "plans",
     setup(__props, { expose: __expose }) {
@@ -3141,6 +3238,9 @@ if (uni.restoreGlobal) {
       const startingTaskId = vue.ref(null);
       let pollTimer = null;
       let endRefreshTimer = null;
+      let assistantTickTimer = null;
+      const dueToastedIds = /* @__PURE__ */ new Set();
+      const tickNow = vue.ref(Date.now());
       const weeks = ["日", "一", "二", "三", "四", "五", "六"];
       const today = /* @__PURE__ */ new Date();
       const curYear = vue.ref(today.getFullYear());
@@ -3148,7 +3248,20 @@ if (uni.restoreGlobal) {
       const selectedDate = vue.ref(formatDate(today));
       const dayTasks = vue.ref([]);
       const datesWithTasks = vue.ref({});
+      const growthTaskCount = vue.computed(() => dayTasks.value.filter((t) => !t.isAssistant).length);
+      const assistantTaskCount = vue.computed(() => dayTasks.value.filter((t) => t.isAssistant).length);
       const taskCount = vue.computed(() => dayTasks.value.length);
+      const taskCountLabel = vue.computed(() => {
+        const n = taskCount.value;
+        if (!n)
+          return "0 项任务";
+        const parts = [];
+        if (growthTaskCount.value)
+          parts.push(`${growthTaskCount.value} 项计划`);
+        if (assistantTaskCount.value)
+          parts.push(`${assistantTaskCount.value} 项提醒`);
+        return parts.join(" · ") || `${n} 项任务`;
+      });
       vue.onMounted(() => {
         vue.nextTick(() => {
           setTimeout(() => {
@@ -3222,6 +3335,118 @@ if (uni.restoreGlobal) {
         if (min <= 0)
           return "即将结束…";
         return `进行中 · 约 ${min} 分钟后结束`;
+      }
+      function isPlanLinkedAssistantTitle(title) {
+        return String(title || "").startsWith("[学习计划]");
+      }
+      function parseDueAtMs(dueAt) {
+        if (!dueAt)
+          return NaN;
+        return new Date(dueAt).getTime();
+      }
+      function getAssistantReminderPhase(dueAt, now = Date.now()) {
+        const due = parseDueAtMs(dueAt);
+        if (Number.isNaN(due))
+          return { phase: "upcoming", label: "" };
+        const diff = due - now;
+        if (diff > 6e4) {
+          const t = formatTimeFromIso(dueAt);
+          return { phase: "upcoming", label: t ? `${t} 提醒` : "待提醒" };
+        }
+        if (diff >= -6e4) {
+          return { phase: "due", label: "到点了" };
+        }
+        return { phase: "overdue", label: formatOverdueLabel(-diff) };
+      }
+      function formatOverdueLabel(overdueMs) {
+        const min = Math.floor(overdueMs / 6e4);
+        if (min < 60)
+          return `已过 ${min} 分钟`;
+        const h = Math.floor(min / 60);
+        const rm = min % 60;
+        if (h < 24)
+          return rm ? `已过 ${h} 小时 ${rm} 分钟` : `已过 ${h} 小时`;
+        const d = Math.floor(h / 24);
+        return `已过 ${d} 天`;
+      }
+      function mapAssistantTask(task) {
+        const dueAt = task.dueAt || "";
+        const { phase, label } = getAssistantReminderPhase(dueAt, tickNow.value);
+        const colors = {
+          upcoming: "#52c41a",
+          due: "#fa8c16",
+          overdue: "#999"
+        };
+        return {
+          id: "assistant-" + task.id,
+          assistantId: task.id,
+          isAssistant: true,
+          name: task.title || "提醒",
+          time: label,
+          date: task.dueDate || "",
+          color: colors[phase] || "#52c41a",
+          dueAt,
+          reminderPhase: phase,
+          status: task.status || "OPEN",
+          metaIcon: phase === "overdue" ? "⏱" : "🔔",
+          locked: true,
+          done: false,
+          displayOnly: true
+        };
+      }
+      function refreshAssistantDisplay() {
+        tickNow.value = Date.now();
+        let changed = false;
+        dayTasks.value = dayTasks.value.map((t) => {
+          if (!t.isAssistant)
+            return t;
+          const { phase, label } = getAssistantReminderPhase(t.dueAt, tickNow.value);
+          if (phase === t.reminderPhase && label === t.time)
+            return t;
+          changed = true;
+          const colors = { upcoming: "#52c41a", due: "#fa8c16", overdue: "#999" };
+          return {
+            ...t,
+            time: label,
+            reminderPhase: phase,
+            color: colors[phase] || t.color,
+            metaIcon: phase === "overdue" ? "⏱" : "🔔"
+          };
+        });
+        if (changed)
+          checkAssistantDueToasts();
+      }
+      function checkAssistantDueToasts() {
+        if (selectedDate.value !== formatDate(today))
+          return;
+        const now = tickNow.value;
+        for (const t of dayTasks.value) {
+          if (!t.isAssistant || t.status !== "OPEN")
+            continue;
+          const due = parseDueAtMs(t.dueAt);
+          if (Number.isNaN(due))
+            continue;
+          const key = String(t.assistantId);
+          if (dueToastedIds.has(key))
+            continue;
+          if (now >= due && now < due + 12e4) {
+            dueToastedIds.add(key);
+            uni.showToast({ title: "提醒：" + t.name, icon: "none", duration: 2800 });
+          }
+        }
+      }
+      function scheduleAssistantTick() {
+        if (assistantTickTimer) {
+          clearInterval(assistantTickTimer);
+          assistantTickTimer = null;
+        }
+        const hasAssistant = dayTasks.value.some((t) => t.isAssistant && t.status === "OPEN");
+        if (!hasAssistant || selectedDate.value !== formatDate(today))
+          return;
+        assistantTickTimer = setInterval(() => {
+          refreshAssistantDisplay();
+        }, 15e3);
+        refreshAssistantDisplay();
       }
       function formatTaskTime(task, status) {
         if (status === "INCOMPLETE")
@@ -3305,6 +3530,10 @@ if (uni.restoreGlobal) {
           clearTimeout(endRefreshTimer);
           endRefreshTimer = null;
         }
+        if (assistantTickTimer) {
+          clearInterval(assistantTickTimer);
+          assistantTickTimer = null;
+        }
       }
       function scheduleTaskRefresh() {
         clearTaskTimers();
@@ -3339,6 +3568,13 @@ if (uni.restoreGlobal) {
         }
         scheduleTaskRefresh();
       }
+      function filterAssistantTasks(assistantRaw) {
+        return (assistantRaw || []).filter((t) => t.status === "OPEN" && !isPlanLinkedAssistantTitle(t.title)).sort((a, b) => (parseDueAtMs(a.dueAt) || 0) - (parseDueAtMs(b.dueAt) || 0));
+      }
+      function mergeDayTasks(growthList, assistantRaw) {
+        const assistants = filterAssistantTasks(assistantRaw).map(mapAssistantTask);
+        return [...growthList, ...assistants];
+      }
       async function loadTasksForDate(date, options = {}) {
         if (!date)
           return;
@@ -3346,14 +3582,21 @@ if (uni.restoreGlobal) {
         if (!silent)
           loadingTasks.value = true;
         try {
-          const res = await getGrowthTasksByDate(date);
-          const list = (res.tasks || []).map((t) => mapGrowthTask(t, date));
-          dayTasks.value = list;
+          const isViewToday = date === formatDate(today);
+          const res = isViewToday ? await getGrowthTasksToday() : await getGrowthTasksByDate(date);
+          const growthList = (res.tasks || []).map((t) => mapGrowthTask(t, date));
+          const assistantRaw = isViewToday ? res.assistantTasks || [] : [];
+          const assistantShown = filterAssistantTasks(assistantRaw);
+          dayTasks.value = mergeDayTasks(growthList, assistantRaw);
+          const total = growthList.length + assistantShown.length;
           datesWithTasks.value = {
             ...datesWithTasks.value,
-            [date]: (res.count != null ? res.count : list.length) > 0
+            [date]: total > 0
           };
           scheduleTaskRefresh();
+          scheduleAssistantTick();
+          if (isViewToday)
+            checkAssistantDueToasts();
         } catch (e) {
           if (!silent) {
             dayTasks.value = [];
@@ -3441,30 +3684,15 @@ if (uni.restoreGlobal) {
           startingTaskId.value = null;
         }
       }
-      async function submitComplete(p) {
-        if (startingTaskId.value)
-          return;
-        startingTaskId.value = p.id;
-        try {
-          const body = {};
-          if (p.estimatedMinutes)
-            body.actualMinutes = p.estimatedMinutes;
-          body.qualityScore = 4;
-          const updated = await completeGrowthTask(p.id, body);
-          if (updated && updated.id != null) {
-            upsertDayTask(updated);
-          } else {
-            await loadTasksForDate(selectedDate.value, { silent: true });
-          }
-          uni.showToast({ title: "已完成", icon: "success" });
-        } catch (e) {
-          const msg = e.code === "CONFLICT" || e.message && e.message.includes("409") ? "该任务无法完成" : e.message || "完成失败";
-          uni.showToast({ title: msg, icon: "none" });
-        } finally {
-          startingTaskId.value = null;
-        }
-      }
       function onTaskTap(p) {
+        if (p.isAssistant) {
+          uni.showToast({
+            title: p.name + " · " + (p.time || ""),
+            icon: "none",
+            duration: 2500
+          });
+          return;
+        }
         if (p.running) {
           openFocusSession(p);
           return;
@@ -3495,10 +3723,16 @@ if (uni.restoreGlobal) {
         return endRefreshTimer;
       }, set endRefreshTimer(v) {
         endRefreshTimer = v;
-      }, weeks, today, curYear, curMonth, selectedDate, dayTasks, datesWithTasks, taskCount, formatDate, calendarDays, FINAL_STATUS, STATUS_COLORS, STATUS_LABELS, formatTimeFromIso, isPlanActionDay, formatRemaining, formatTaskTime, mapGrowthTask, toFocusTask, openFocusSession, clearTaskTimers, scheduleTaskRefresh, upsertDayTask, loadTasksForDate, selectedLabel, selectDate, prevMonth, nextMonth, lockedToast, onCheckTap, submitComplete, onTaskTap, goBack, addPlan, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted, onUnmounted: vue.onUnmounted, nextTick: vue.nextTick, watch: vue.watch, get onShow() {
+      }, get assistantTickTimer() {
+        return assistantTickTimer;
+      }, set assistantTickTimer(v) {
+        assistantTickTimer = v;
+      }, dueToastedIds, tickNow, weeks, today, curYear, curMonth, selectedDate, dayTasks, datesWithTasks, growthTaskCount, assistantTaskCount, taskCount, taskCountLabel, formatDate, calendarDays, FINAL_STATUS, STATUS_COLORS, STATUS_LABELS, formatTimeFromIso, isPlanActionDay, formatRemaining, isPlanLinkedAssistantTitle, parseDueAtMs, getAssistantReminderPhase, formatOverdueLabel, mapAssistantTask, refreshAssistantDisplay, checkAssistantDueToasts, scheduleAssistantTick, formatTaskTime, mapGrowthTask, toFocusTask, openFocusSession, clearTaskTimers, scheduleTaskRefresh, upsertDayTask, filterAssistantTasks, mergeDayTasks, loadTasksForDate, selectedLabel, selectDate, prevMonth, nextMonth, lockedToast, onCheckTap, onTaskTap, goBack, addPlan, ref: vue.ref, computed: vue.computed, onMounted: vue.onMounted, onUnmounted: vue.onUnmounted, nextTick: vue.nextTick, watch: vue.watch, get onShow() {
         return onShow;
       }, get getGrowthTasksByDate() {
         return getGrowthTasksByDate;
+      }, get getGrowthTasksToday() {
+        return getGrowthTasksToday;
       }, get startGrowthTask() {
         return startGrowthTask;
       }, get openGrowthTaskFocusPage() {
@@ -3508,7 +3742,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$8(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$7(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_growth_task_mini_bar = resolveEasycom(vue.resolveDynamicComponent("growth-task-mini-bar"), __easycom_0);
     return vue.openBlock(), vue.createElementBlock("view", { class: "plans-page" }, [
       vue.createVNode(_component_growth_task_mini_bar),
@@ -3628,7 +3862,7 @@ if (uni.restoreGlobal) {
         vue.createElementVNode(
           "text",
           { class: "selected-count" },
-          vue.toDisplayString($setup.taskCount) + " 项任务",
+          vue.toDisplayString($setup.taskCountLabel),
           1
           /* TEXT */
         )
@@ -3655,7 +3889,14 @@ if (uni.restoreGlobal) {
                 vue.renderList($setup.dayTasks, (p, pi) => {
                   return vue.openBlock(), vue.createElementBlock("view", {
                     key: p.id,
-                    class: vue.normalizeClass(["plan-card", { show: $setup.loaded, locked: p.locked }]),
+                    class: vue.normalizeClass(["plan-card", {
+                      show: $setup.loaded,
+                      locked: p.locked && !p.isAssistant,
+                      assistant: p.isAssistant,
+                      "assistant-upcoming": p.isAssistant && p.reminderPhase === "upcoming",
+                      "assistant-due": p.isAssistant && p.reminderPhase === "due",
+                      "assistant-overdue": p.isAssistant && p.reminderPhase === "overdue"
+                    }]),
                     style: vue.normalizeStyle({ transitionDelay: pi * 0.08 + "s" }),
                     onClick: ($event) => $setup.onTaskTap(p)
                   }, [
@@ -3674,7 +3915,13 @@ if (uni.restoreGlobal) {
                         vue.createElementVNode(
                           "text",
                           {
-                            class: vue.normalizeClass(["plan-name", { done: p.done, incomplete: p.incomplete, skipped: p.skipped }])
+                            class: vue.normalizeClass(["plan-name", {
+                              done: p.done,
+                              incomplete: p.incomplete,
+                              skipped: p.skipped,
+                              "assistant-title": p.isAssistant,
+                              "assistant-title-upcoming": p.isAssistant && p.reminderPhase === "upcoming"
+                            }])
                           },
                           vue.toDisplayString(p.name),
                           3
@@ -3690,15 +3937,22 @@ if (uni.restoreGlobal) {
                           ),
                           vue.createElementVNode(
                             "text",
-                            { class: "plan-time" },
+                            {
+                              class: vue.normalizeClass(["plan-time", {
+                                "time-upcoming": p.isAssistant && p.reminderPhase === "upcoming",
+                                "time-overdue": p.isAssistant && p.reminderPhase === "overdue",
+                                "time-due": p.isAssistant && p.reminderPhase === "due"
+                              }])
+                            },
                             vue.toDisplayString(p.time),
-                            1
-                            /* TEXT */
+                            3
+                            /* TEXT, CLASS */
                           )
                         ])
                       ])
                     ]),
-                    vue.createElementVNode("view", {
+                    !p.isAssistant ? (vue.openBlock(), vue.createElementBlock("view", {
+                      key: 0,
                       class: vue.normalizeClass(["plan-check", {
                         done: p.done,
                         running: p.running,
@@ -3728,7 +3982,18 @@ if (uni.restoreGlobal) {
                         key: 5,
                         class: "check-label muted"
                       }, "—"))
-                    ], 10, ["onClick"])
+                    ], 10, ["onClick"])) : (vue.openBlock(), vue.createElementBlock("view", {
+                      key: 1,
+                      class: "plan-remind-badge"
+                    }, [
+                      vue.createElementVNode(
+                        "text",
+                        { class: "remind-icon" },
+                        vue.toDisplayString(p.reminderPhase === "overdue" ? "⏱" : "🔔"),
+                        1
+                        /* TEXT */
+                      )
+                    ]))
                   ], 14, ["onClick"]);
                 }),
                 128
@@ -3750,7 +4015,7 @@ if (uni.restoreGlobal) {
       ])
     ]);
   }
-  const PagesPlansPlans = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["render", _sfc_render$8], ["__scopeId", "data-v-80c07444"], ["__file", "E:/HTML/ai_grow/pages/plans/plans.vue"]]);
+  const PagesPlansPlans = /* @__PURE__ */ _export_sfc(_sfc_main$8, [["render", _sfc_render$7], ["__scopeId", "data-v-80c07444"], ["__file", "E:/HTML/ai_grow/pages/plans/plans.vue"]]);
   const _sfc_main$7 = {
     __name: "growth-task-focus",
     setup(__props, { expose: __expose }) {
@@ -3840,7 +4105,7 @@ if (uni.restoreGlobal) {
               const body = { qualityScore: 4 };
               if (task.estimatedMinutes)
                 body.actualMinutes = task.estimatedMinutes;
-              await completeGrowthTask$1(task.id, body);
+              await completeGrowthTask(task.id, body);
               clearActiveGrowthTask();
               uni.showToast({ title: "已完成", icon: "success" });
               setTimeout(() => goBack(), 400);
@@ -3857,7 +4122,7 @@ if (uni.restoreGlobal) {
       }, get onHide() {
         return onHide;
       }, get completeGrowthTask() {
-        return completeGrowthTask$1;
+        return completeGrowthTask;
       }, get growthTaskSession() {
         return growthTaskSession;
       }, get clearActiveGrowthTask() {
@@ -3881,7 +4146,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$7(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$6(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "focus-page" }, [
       vue.createElementVNode("view", { class: "bg-glow g1" }),
       vue.createElementVNode("view", { class: "bg-glow g2" }),
@@ -4028,7 +4293,7 @@ if (uni.restoreGlobal) {
       ]))
     ]);
   }
-  const PagesGrowthTaskFocusGrowthTaskFocus = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["render", _sfc_render$7], ["__scopeId", "data-v-afd4bbba"], ["__file", "E:/HTML/ai_grow/pages/growth-task-focus/growth-task-focus.vue"]]);
+  const PagesGrowthTaskFocusGrowthTaskFocus = /* @__PURE__ */ _export_sfc(_sfc_main$7, [["render", _sfc_render$6], ["__scopeId", "data-v-afd4bbba"], ["__file", "E:/HTML/ai_grow/pages/growth-task-focus/growth-task-focus.vue"]]);
   const _sfc_main$6 = {
     __name: "login",
     setup(__props, { expose: __expose }) {
@@ -4135,7 +4400,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$6(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$5(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "login-page" }, [
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
@@ -4444,7 +4709,7 @@ if (uni.restoreGlobal) {
       )
     ]);
   }
-  const PagesLoginLogin = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["render", _sfc_render$6], ["__scopeId", "data-v-e4e4508d"], ["__file", "E:/HTML/ai_grow/pages/login/login.vue"]]);
+  const PagesLoginLogin = /* @__PURE__ */ _export_sfc(_sfc_main$6, [["render", _sfc_render$5], ["__scopeId", "data-v-e4e4508d"], ["__file", "E:/HTML/ai_grow/pages/login/login.vue"]]);
   const _sfc_main$5 = {
     __name: "register",
     setup(__props, { expose: __expose }) {
@@ -4522,7 +4787,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$5(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$4(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "register-page" }, [
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
@@ -4667,7 +4932,7 @@ if (uni.restoreGlobal) {
       )
     ]);
   }
-  const PagesRegisterRegister = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["render", _sfc_render$5], ["__scopeId", "data-v-bac4a35d"], ["__file", "E:/HTML/ai_grow/pages/register/register.vue"]]);
+  const PagesRegisterRegister = /* @__PURE__ */ _export_sfc(_sfc_main$5, [["render", _sfc_render$4], ["__scopeId", "data-v-bac4a35d"], ["__file", "E:/HTML/ai_grow/pages/register/register.vue"]]);
   const _sfc_main$4 = {
     __name: "forgot",
     setup(__props, { expose: __expose }) {
@@ -4806,7 +5071,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$4(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$3(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "forgot-page" }, [
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
@@ -5150,7 +5415,7 @@ if (uni.restoreGlobal) {
       )
     ]);
   }
-  const PagesForgotForgot = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["render", _sfc_render$4], ["__scopeId", "data-v-51689b0a"], ["__file", "E:/HTML/ai_grow/pages/forgot/forgot.vue"]]);
+  const PagesForgotForgot = /* @__PURE__ */ _export_sfc(_sfc_main$4, [["render", _sfc_render$3], ["__scopeId", "data-v-51689b0a"], ["__file", "E:/HTML/ai_grow/pages/forgot/forgot.vue"]]);
   const _sfc_main$3 = {
     __name: "profile",
     setup(__props, { expose: __expose }) {
@@ -5336,8 +5601,10 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$3(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$2(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_growth_task_mini_bar = resolveEasycom(vue.resolveDynamicComponent("growth-task-mini-bar"), __easycom_0);
     return vue.openBlock(), vue.createElementBlock("view", { class: "profile-page" }, [
+      vue.createVNode(_component_growth_task_mini_bar),
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
         vue.createElementVNode("view", { class: "bubble b2" }),
@@ -5601,7 +5868,7 @@ if (uni.restoreGlobal) {
       ])) : vue.createCommentVNode("v-if", true)
     ]);
   }
-  const PagesProfileProfile = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["render", _sfc_render$3], ["__scopeId", "data-v-dd383ca2"], ["__file", "E:/HTML/ai_grow/pages/profile/profile.vue"]]);
+  const PagesProfileProfile = /* @__PURE__ */ _export_sfc(_sfc_main$3, [["render", _sfc_render$2], ["__scopeId", "data-v-dd383ca2"], ["__file", "E:/HTML/ai_grow/pages/profile/profile.vue"]]);
   const _sfc_main$2 = {
     __name: "tasks",
     setup(__props, { expose: __expose }) {
@@ -5690,8 +5957,10 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$2(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$1(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_growth_task_mini_bar = resolveEasycom(vue.resolveDynamicComponent("growth-task-mini-bar"), __easycom_0);
     return vue.openBlock(), vue.createElementBlock("view", { class: "tasks-page" }, [
+      vue.createVNode(_component_growth_task_mini_bar),
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
         vue.createElementVNode("view", { class: "bubble b2" }),
@@ -5811,7 +6080,7 @@ if (uni.restoreGlobal) {
                   /* TEXT */
                 )) : vue.createCommentVNode("v-if", true),
                 vue.createElementVNode("view", { class: "task-meta" }, [
-                  task.dueDate ? (vue.openBlock(), vue.createElementBlock("view", {
+                  task.dueAt || task.dueDate ? (vue.openBlock(), vue.createElementBlock("view", {
                     key: 0,
                     class: "meta-item"
                   }, [
@@ -5819,7 +6088,7 @@ if (uni.restoreGlobal) {
                     vue.createElementVNode(
                       "text",
                       { class: "meta-text" },
-                      vue.toDisplayString(task.dueDate),
+                      vue.toDisplayString(task.dueAt || task.dueDate),
                       1
                       /* TEXT */
                     )
@@ -5843,81 +6112,7 @@ if (uni.restoreGlobal) {
       ], 40, ["refresher-triggered"])
     ]);
   }
-  const PagesTasksTasks = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["render", _sfc_render$2], ["__scopeId", "data-v-027feebf"], ["__file", "E:/HTML/ai_grow/pages/tasks/tasks.vue"]]);
-  function toStr(v) {
-    if (v == null || v === "")
-      return null;
-    return String(v);
-  }
-  function normalizePushPayload(raw) {
-    if (!raw)
-      return null;
-    let data = raw;
-    if (typeof raw === "string") {
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        return null;
-      }
-    }
-    if (data.payload)
-      data = data.payload;
-    if (typeof data === "string") {
-      try {
-        data = JSON.parse(data);
-      } catch {
-        return null;
-      }
-    }
-    const type = data.type || data.msgType;
-    if (!type)
-      return null;
-    return {
-      type,
-      notificationId: data.notificationId != null ? Number(data.notificationId) : null,
-      sessionId: data.sessionId != null ? Number(data.sessionId) : null,
-      messageId: data.messageId != null ? Number(data.messageId) : null,
-      taskId: data.taskId != null && data.taskId !== "" ? Number(data.taskId) : null,
-      title: data.title || "",
-      body: data.body || "",
-      unreadCount: data.unreadCount != null ? Number(data.unreadCount) : void 0
-    };
-  }
-  function stashPendingSession(sessionId) {
-    if (sessionId == null)
-      return;
-    uni.setStorageSync("pendingOpenSessionId", toStr(sessionId));
-  }
-  function navigateFromPushPayload(raw) {
-    const data = normalizePushPayload(raw);
-    if (!data)
-      return;
-    if (data.unreadCount !== void 0 && !isNaN(data.unreadCount)) {
-      store.unreadCount = data.unreadCount;
-    }
-    if (data.notificationId && getAccessToken()) {
-      markNotificationRead(data.notificationId).then(() => refreshUnreadCount()).catch(() => {
-      });
-    }
-    switch (data.type) {
-      case "CHAT_REPLY":
-      case "WEEKLY_COMPANION_DIGEST":
-      case "TASK_DUE_REMINDER":
-        if (data.sessionId != null) {
-          stashPendingSession(data.sessionId);
-          uni.reLaunch({ url: "/pages/index/index" });
-          return;
-        }
-        if (data.taskId != null) {
-          uni.navigateTo({ url: "/pages/tasks/tasks?status=OPEN" });
-          return;
-        }
-        if (data.type !== "CHAT_REPLY") {
-          uni.navigateTo({ url: "/pages/notifications/notifications" });
-        }
-        break;
-    }
-  }
+  const PagesTasksTasks = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["render", _sfc_render$1], ["__scopeId", "data-v-027feebf"], ["__file", "E:/HTML/ai_grow/pages/tasks/tasks.vue"]]);
   const _sfc_main$1 = {
     __name: "notifications",
     setup(__props, { expose: __expose }) {
@@ -6064,7 +6259,7 @@ if (uni.restoreGlobal) {
       return __returned__;
     }
   };
-  function _sfc_render$1(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "notify-page" }, [
       vue.createElementVNode("view", { class: "bg-bubbles" }, [
         vue.createElementVNode("view", { class: "bubble b1" }),
@@ -6237,7 +6432,7 @@ if (uni.restoreGlobal) {
       ], 40, ["refresher-triggered"])
     ]);
   }
-  const PagesNotificationsNotifications = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["render", _sfc_render$1], ["__scopeId", "data-v-e30a2353"], ["__file", "E:/HTML/ai_grow/pages/notifications/notifications.vue"]]);
+  const PagesNotificationsNotifications = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["render", _sfc_render], ["__scopeId", "data-v-e30a2353"], ["__file", "E:/HTML/ai_grow/pages/notifications/notifications.vue"]]);
   __definePage("pages/index/index", PagesIndexIndex);
   __definePage("pages/plans/plans", PagesPlansPlans);
   __definePage("pages/growth-task-focus/growth-task-focus", PagesGrowthTaskFocusGrowthTaskFocus);
@@ -6282,9 +6477,12 @@ if (uni.restoreGlobal) {
     });
     socketTask.onMessage((res) => {
       try {
-        const data = JSON.parse(res.data);
+        let data = res.data;
+        if (typeof data === "string")
+          data = JSON.parse(data);
         listeners.forEach((fn) => fn(data));
       } catch (e) {
+        formatAppLog("warn", "at utils/websocket.js:42", "[ws] message parse failed", e);
       }
     });
     socketTask.onClose(() => {
@@ -6479,11 +6677,7 @@ if (uni.restoreGlobal) {
       }
     }
   };
-  function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_growth_task_mini_bar = resolveEasycom(vue.resolveDynamicComponent("growth-task-mini-bar"), __easycom_0);
-    return vue.openBlock(), vue.createBlock(_component_growth_task_mini_bar);
-  }
-  const App = /* @__PURE__ */ _export_sfc(_sfc_main, [["render", _sfc_render], ["__file", "E:/HTML/ai_grow/App.vue"]]);
+  const App = /* @__PURE__ */ _export_sfc(_sfc_main, [["__file", "E:/HTML/ai_grow/App.vue"]]);
   function createApp() {
     const app = vue.createVueApp(App);
     return {

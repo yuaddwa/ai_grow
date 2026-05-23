@@ -1,5 +1,6 @@
 import { store, refreshUnreadCount } from './store.js'
 import { playNotificationSound } from './notifySound.js'
+import { normalizePushPayload } from './pushNavigate.js'
 
 const chatReplyListeners = []
 const notifyListeners = []
@@ -26,16 +27,26 @@ function emitNotifyChange() {
   })
 }
 
-/** WebSocket 下行统一处理（文档 4.2 / 4.3） */
-export function handleRealtimeMessage(data) {
-  if (!data) return
+function parseRealtimeRaw(raw) {
+  if (!raw) return null
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw) } catch { return null }
+  }
+  return raw
+}
 
-  if (data.unreadCount !== undefined && data.type == null) {
-    store.unreadCount = Number(data.unreadCount) || 0
+/** WebSocket 下行统一处理（文档 4.2 / 4.3） */
+export function handleRealtimeMessage(raw) {
+  const incoming = parseRealtimeRaw(raw)
+  if (!incoming) return
+
+  if (incoming.unreadCount !== undefined && (incoming.type == null || incoming.type === '')) {
+    store.unreadCount = Number(incoming.unreadCount) || 0
     return
   }
 
-  if (!data.type) return
+  const data = normalizePushPayload(incoming)
+  if (!data || !data.type) return
 
   switch (data.type) {
     case 'TASK_DUE_REMINDER':
@@ -47,11 +58,11 @@ export function handleRealtimeMessage(data) {
       }
       emitNotifyChange()
       playNotificationSound()
-      // #ifdef APP-PLUS
-      if (data.title) {
-        uni.showToast({ title: data.title, icon: 'none', duration: 2500 })
-      }
-      // #endif
+      uni.showToast({
+        title: data.title || (data.type === 'WEEKLY_COMPANION_DIGEST' ? '本周回顾' : '任务提醒'),
+        icon: 'none',
+        duration: 2800
+      })
       break
     case 'CHAT_REPLY':
       if (data.unreadCount !== undefined) {

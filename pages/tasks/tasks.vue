@@ -60,9 +60,9 @@
           <text class="task-title">{{ task.title }}</text>
           <text class="task-desc" v-if="task.description">{{ task.description }}</text>
           <view class="task-meta">
-            <view class="meta-item" v-if="task.dueDate">
+            <view class="meta-item" v-if="task.dueAt || task.dueDate">
               <text style="font-size:22rpx;">⏰</text>
-              <text class="meta-text">{{ task.dueDate }}</text>
+              <text class="meta-text">{{ task.dueAt || task.dueDate }}</text>
             </view>
             <view class="task-tag" :class="statusClass(task.status)">{{ statusText(task.status) }}</view>
           </view>

@@ -332,6 +332,46 @@
   font-size: 0.6875rem;
   color: #aaa;
 }
+.plan-time.time-upcoming[data-v-80c07444] {
+  color: #52c41a;
+  font-weight: 500;
+}
+.plan-time.time-due[data-v-80c07444] {
+  color: #fa8c16;
+  font-weight: 600;
+}
+.plan-time.time-overdue[data-v-80c07444] {
+  color: #999;
+}
+.plan-card.assistant-upcoming[data-v-80c07444] {
+  background: linear-gradient(90deg, rgba(82, 196, 26, 0.06) 0%, #fff 28%);
+}
+.plan-card.assistant-due[data-v-80c07444] {
+  background: linear-gradient(90deg, rgba(250, 140, 22, 0.1) 0%, #fff 28%);
+  box-shadow: 0 0.0625rem 0.5rem rgba(250, 140, 22, 0.15);
+}
+.plan-card.assistant-overdue[data-v-80c07444] {
+  opacity: 0.92;
+}
+.plan-name.assistant-title-upcoming[data-v-80c07444] {
+  color: #389e0d;
+}
+.plan-remind-badge[data-v-80c07444] {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: rgba(82, 196, 26, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.plan-card.assistant-overdue .plan-remind-badge[data-v-80c07444] {
+  background: rgba(0, 0, 0, 0.05);
+}
+.remind-icon[data-v-80c07444] {
+  font-size: 0.8125rem;
+}
 .plan-check[data-v-80c07444] {
   width: 1.5rem;
   height: 1.5rem;
