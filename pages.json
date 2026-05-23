@@ -5,7 +5,10 @@
 			"style": {
 				"navigationStyle": "custom",
 				"navigationBarTitleText": "AI成长",
-				"disableScroll": true
+				"disableScroll": true,
+				"app-plus": {
+					"softinputMode": "adjustResize"
+				}
 			}
 		},
 		{
@@ -14,6 +17,15 @@
 				"navigationStyle": "custom",
 				"navigationBarTitleText": "我的计划",
 				"disableScroll": true
+			}
+		},
+		{
+			"path": "pages/growth-task-focus/growth-task-focus",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "专注执行",
+				"disableScroll": true,
+				"backgroundColor": "#1a1a2e"
 			}
 		},
 		{
@@ -70,6 +82,10 @@
 		"app-plus": {
 			"bounce": "none"
 		}
+	},
+	"easycom": {
+		"autoscan": true,
+		"custom": {}
 	},
 	"uniIdRouter": {}
 }

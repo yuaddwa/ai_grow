@@ -1,5 +1,6 @@
 <template>
   <view class="profile-page">
+    <growth-task-mini-bar />
     <!-- 动态背景 -->
     <view class="bg-bubbles">
       <view class="bubble b1"></view>

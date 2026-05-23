@@ -1,33 +1,19 @@
 <template>
-  <view class="page">
-    <view class="banner" :class="{ show: loaded }">
-      <view class="banner-row">
-        <text style="font-size:48rpx;">🤖</text>
-        <view class="banner-texts">
-          <text class="banner-title">AI成长</text>
-          <text class="banner-sub">你的智能计划助手</text>
-        </view>
-        <view class="plan-entry" @tap="goNotifications">
-          <text style="font-size:28rpx;color:#fff;">🔔</text>
+  <view class="page" :class="{ 'keyboard-open': keyboardHeight > 0 }">
+    <growth-task-mini-bar />
+    <view class="top-bar" :class="{ show: loaded }">
+      <text class="top-title">AI成长</text>
+      <view class="top-actions">
+        <text class="top-link" @tap="openHistory">历史</text>
+        <text class="top-link" @tap="createNewSession">新对话</text>
+        <view class="top-link-wrap" @tap="goNotifications">
+          <text class="top-link">通知</text>
           <view class="badge" v-if="store.unreadCount > 0">
             <text class="badge-text">{{ store.unreadCount > 99 ? '99+' : store.unreadCount }}</text>
           </view>
         </view>
-        <view class="plan-entry" @tap="goTasks">
-          <text style="font-size:28rpx;color:#fff;">📋</text>
-        </view>
-        <view class="plan-entry" @tap="goLogin">
-          <text style="font-size:28rpx;color:#fff;">👤</text>
-        </view>
-        <view class="plan-entry" @tap="openHistory">
-          <text style="font-size:28rpx;color:#fff;">💬</text>
-        </view>
-        <view class="plan-entry" @tap="createNewSession">
-          <text style="font-size:28rpx;color:#fff;">＋</text>
-        </view>
-        <view class="plan-entry" @tap="goPlans">
-          <text class="plan-entry-txt">计划 ›</text>
-        </view>
+        <text class="top-link" @tap="goPlans">计划</text>
+        <text class="top-link" @tap="goLogin">我的</text>
       </view>
     </view>
 
@@ -52,20 +38,23 @@
             </view>
             <view v-if="msg.role === 'ai'" class="card-ai">
             <view v-if="msg.type === 'loading'" class="ai-loading-wrap">
-              <view class="wifi-loader">
-                <svg class="circle-outer" viewBox="0 0 86 86">
-                  <circle class="back" cx="43" cy="43" r="40" fill="none" />
-                  <circle class="front" cx="43" cy="43" r="40" fill="none" />
-                </svg>
-                <svg class="circle-middle" viewBox="0 0 60 60">
-                  <circle class="back" cx="30" cy="30" r="27" fill="none" />
-                  <circle class="front" cx="30" cy="30" r="27" fill="none" />
-                </svg>
-                <svg class="circle-inner" viewBox="0 0 34 34">
-                  <circle class="back" cx="17" cy="17" r="14" fill="none" />
-                  <circle class="front" cx="17" cy="17" r="14" fill="none" />
-                </svg>
-                <view class="text" data-text="loading"></view>
+              <view class="loader">
+                <view class="loader-ship">
+                  <view></view>
+                  <view></view>
+                  <view></view>
+                  <view></view>
+                  <view class="base">
+                    <view></view>
+                  </view>
+                  <view class="face"></view>
+                </view>
+                <view class="longfazers">
+                  <view></view>
+                  <view></view>
+                  <view></view>
+                  <view></view>
+                </view>
               </view>
             </view>
             <view v-else-if="msg.type === 'text'">
@@ -190,84 +179,57 @@
     </scroll-view>
 
 
-    <view class="func-bar" :class="{ show: loaded }">
-      <view class="func-pill" @tap="onFeature('plan')">
-        <text> 录入计划</text>
-      </view>
-      <view class="func-pill" @tap="onFeature('recommend')">
-        <text> 智能推荐</text>
-      </view>
-      <view class="func-pill" @tap="onFeature('calendar')">
-        <text> 日程视图</text>
-      </view>
-      <view class="func-pill" @tap="onFeature('stats')">
-        <text> 数据统计</text>
-      </view>
-    </view>
-
     <view class="input-card">
-      <!-- 文字输入模式 -->
-      <view v-if="inputMode === 'text'">
+      <view class="input-row">
+        <!-- 文字输入 -->
         <input
+          v-if="inputMode === 'text'"
           class="inp"
           v-model="inputText"
           type="text"
           placeholder="输入计划..."
           placeholder-class="inp-ph"
           confirm-type="send"
+          :adjust-position="false"
+          :cursor-spacing="24"
           :focus="inputFocus"
           @confirm="onSend"
-          @blur="inputFocus = false"
+          @focus="onInputFocus"
+          @blur="onInputBlur"
           @compositionstart="composing = true"
           @compositionend="composing = false"
         />
-      </view>
-      <!-- 语音模式 -->
-      <view
-        v-else
-        class="voice-area"
-        :class="{ recording: isRecording }"
-        @touchstart.stop="onVoiceTouchStart"
-        @touchend.stop="onVoiceTouchEnd"
-        @touchcancel.stop="onVoiceTouchEnd"
-        @touchmove.stop
-      >
-        <text class="voice-tip" :class="{ recording: isRecording }">
-          {{ isRecording ? '松开 结束' : '按住 说话' }}
-        </text>
-      </view>
-
-      <view class="inp-tools">
-        <!-- 键盘/语音切换 -->
-        <view class="inp-btn" @tap="toggleMode">
-          <text v-if="inputMode === 'text'" style="font-size:28rpx;color:#bbb;">⌨</text>
-          <text v-else style="font-size:28rpx;color:#bbb;">🎤</text>
-        </view>
-
-        <!-- 发送 / 麦克风 -->
-        <view
-          v-if="inputMode === 'text'"
-          class="inp-send"
-          :class="{ active: inputText.length > 0 }"
-          @tap="onSend"
-        >
-          <text style="font-size:28rpx;color:#fff;">发送</text>
-        </view>
+        <!-- 语音输入 -->
         <view
           v-else
-          class="inp-mic"
-          :class="{ pressed: isRecording }"
+          class="voice-area"
+          :class="{ recording: isRecording }"
           @touchstart.stop="onVoiceTouchStart"
           @touchend.stop="onVoiceTouchEnd"
           @touchcancel.stop="onVoiceTouchEnd"
           @touchmove.stop
         >
-          <text style="font-size:28rpx;color:#fff;">🎤</text>
+          <text class="voice-tip" :class="{ recording: isRecording }">
+            {{ isRecording ? '松开 结束' : '按住 说话' }}
+          </text>
         </view>
 
-        <!-- 加号 -->
-        <view class="inp-btn" @tap="showAddMenu">
-          <text style="font-size:36rpx;color:#bbb;">＋</text>
+        <view class="input-actions">
+          <view class="inp-btn" @tap="toggleMode">
+            <text v-if="inputMode === 'text'" class="inp-btn-icon">🎤</text>
+            <text v-else class="inp-btn-icon">⌨</text>
+          </view>
+          <view
+            v-if="inputMode === 'text'"
+            class="inp-send"
+            :class="{ active: inputText.length > 0 }"
+            @tap="onSend"
+          >
+            <text class="inp-send-txt">发送</text>
+          </view>
+          <view class="inp-btn" @tap="showAddMenu">
+            <text class="inp-btn-icon inp-btn-plus">＋</text>
+          </view>
         </view>
       </view>
     </view>
@@ -331,7 +293,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, computed, onMounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import {
   getAccessToken, sendChatMessage, transcribeAudio, getUserInfo,
@@ -365,6 +327,8 @@ const sessionsRefreshing = ref(false)
 const sessionsPage = ref(0)
 const sessionsHasNext = ref(false)
 const playingVoiceKey = ref(null)
+const keyboardHeight = ref(0)
+let keyboardHandler = null
 let recorderManager = null
 let innerAudioContext = null
 let h5MediaRecorder = null
@@ -390,8 +354,6 @@ function getWelcomeMessages() {
 
 const messages = ref(getWelcomeMessages())
 
-const showTags = computed(() => messages.value.length <= 2)
-
 function openPendingSessionIfAny() {
   const pending = uni.getStorageSync('pendingOpenSessionId')
   if (!pending || !getAccessToken()) return
@@ -407,6 +369,14 @@ onShow(() => {
 })
 
 onMounted(() => {
+  keyboardHandler = (res) => {
+    keyboardHeight.value = res.height || 0
+    if (keyboardHeight.value > 0) {
+      nextTick(() => setTimeout(scroll, 80))
+    }
+  }
+  uni.onKeyboardHeightChange(keyboardHandler)
+
   // 确保初始状态渲染后再触发入场动画
   nextTick(() => {
     setTimeout(() => { loaded.value = true }, 50)
@@ -435,6 +405,19 @@ onMounted(() => {
     }
   }
 })
+
+onUnmounted(() => {
+  if (keyboardHandler) uni.offKeyboardHeightChange(keyboardHandler)
+})
+
+function onInputFocus() {
+  inputFocus.value = true
+  scroll()
+}
+
+function onInputBlur() {
+  inputFocus.value = false
+}
 
 function scroll() { nextTick(() => { scrollTop.value = Math.random() * 99999 }) }
 
@@ -1266,31 +1249,6 @@ function onTranscribeSuccess(text) {
   }).finally(() => { sending.value = false })
 }
 
-function onQuick(t) {
-  if (sending.value) return
-  sending.value = true
-  messages.value.push({ role: 'user', content: t, show: true })
-  scroll()
-  pushAiLoading()
-  sendChatMessage(t, sessionId.value || undefined).then(res => {
-    onChatSuccess(res)
-  }).catch((e) => {
-    removeAiLoading()
-    if (e && e.code === 'UNAUTHORIZED') {
-      uni.showToast({ title: '请先登录', icon: 'none' })
-      setTimeout(() => { uni.navigateTo({ url: '/pages/login/login' }) }, 800)
-    } else {
-      messages.value.push({ role: 'ai', type: 'text', title: '', content: '网络异常，请稍后重试', tip: '', show: true })
-      scroll()
-    }
-  }).finally(() => { sending.value = false })
-}
-
-function onFeature(type) {
-  const map = { plan: '我想录入今天的计划', recommend: '帮我推荐一些高效的习惯', calendar: '查看今天的日程安排', stats: '帮我看看最近的数据统计' }
-  onQuick(map[type])
-}
-
 function showAddMenu() {
   addVisible.value = true
 }
@@ -1303,6 +1261,8 @@ function onAdd(key) {
 
 </script>
 
+<style src="../../styles/ai-reply-loading.css"></style>
+
 <style scoped>
 page { height: 100%; background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%); }
 
@@ -1312,93 +1272,62 @@ page { height: 100%; background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%
   flex-direction: column;
   overflow: hidden;
   background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%, #ffffff 100%);
-  padding-top: 100rpx;
+  padding-top: 88rpx;
   box-sizing: border-box;
 }
 
 /* 动画 */
 @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
 
-.banner.show { opacity: 1; transform: translateY(0); }
-.func-bar.show { opacity: 1; transform: translateY(0); }
+.top-bar.show { opacity: 1; }
 .msg-item.show { opacity: 1; transform: none; }
 
-/* Banner */
-.banner {
+/* 顶部导航 */
+.top-bar {
   flex-shrink: 0;
-  background: linear-gradient(135deg, #4facfe 0%, #6cb4ee 50%, #a8d8ff 100%);
-  border-radius: 16rpx;
-  padding: 24rpx 28rpx;
-  margin: 0 24rpx 14rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 24rpx;
+  background: #fff;
+  border-bottom: 1rpx solid #e8eef4;
   opacity: 0;
-  transform: translateY(-24rpx);
-  transition: opacity 0.45s ease-out, transform 0.45s ease-out;
+  transition: opacity 0.3s ease-out;
 }
-.banner-row {
+.top-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+.top-actions {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: 24rpx;
 }
-.robot {
-  flex-shrink: 0;
+.top-link {
+  font-size: 24rpx;
+  color: #666;
 }
-.plan-entry {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 4rpx;
-  background: rgba(255,255,255,0.25);
-  padding: 8rpx 16rpx;
-  border-radius: 20rpx;
-  margin-left: auto;
+.top-link-wrap {
   position: relative;
-}
-.plan-entry-txt {
-  font-size: 22rpx;
-  color: #fff;
 }
 .badge {
   position: absolute;
-  top: -8rpx; right: -8rpx;
-  min-width: 28rpx; height: 28rpx;
+  top: -14rpx;
+  right: -18rpx;
+  min-width: 28rpx;
+  height: 28rpx;
   border-radius: 14rpx;
   background: #ff4757;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0 6rpx;
 }
 .badge-text {
   font-size: 18rpx;
   color: #fff;
   font-weight: 600;
-}
-.banner-texts { flex: 1; }
-.banner-title { display: block; color: #fff; font-size: 32rpx; font-weight: bold; }
-.banner-sub { display: block; color: rgba(255,255,255,0.8); font-size: 22rpx; margin-top: 4rpx; }
-
-/* 功能标签 */
-.func-bar {
-  flex-shrink: 0;
-  display: flex;
-  gap: 12rpx;
-  padding: 0 24rpx;
-  margin-bottom: 12rpx;
-  opacity: 0;
-  transform: translateY(32rpx);
-  transition: opacity 0.45s ease-out 0.12s, transform 0.45s ease-out 0.12s;
-  flex-wrap: wrap;
-}
-.func-pill {
-  background: linear-gradient(135deg, #e8f4fd, #f0f7ff);
-  font-size: 22rpx;
-  color: #4a8cc7;
-  padding: 10rpx 18rpx;
-  border-radius: 22rpx;
-  transition: all 0.15s;
-  border: 1rpx solid rgba(79,172,254,0.15);
-}
-.func-pill:active {
-  background: #d4ecff;
-  transform: scale(0.96);
 }
 
 /* 聊天 */
@@ -1407,7 +1336,7 @@ page { height: 100%; background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%
   height: 0;
   min-height: 0;
   width: 100%;
-  padding: 0 24rpx;
+  padding: 0 24rpx 16rpx;
   box-sizing: border-box;
 }
 .msg-list { padding-bottom: 14rpx; }
@@ -1422,6 +1351,7 @@ page { height: 100%; background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%
 .card-ai {
   background: #fff; border-radius: 16rpx; padding: 22rpx; max-width: 88%;
   box-shadow: 0 2rpx 10rpx rgba(79,172,254,0.06);
+  overflow: visible;
 }
 .ai-avatar {
   flex-shrink: 0;
@@ -1435,134 +1365,6 @@ page { height: 100%; background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%
   margin-top: 8rpx;
   box-shadow: 0 2rpx 8rpx rgba(79,172,254,0.12);
 }
-.ai-loading-wrap {
-  display: flex; align-items: center; justify-content: center;
-  padding: 16rpx 8rpx 56rpx; min-width: 140rpx; min-height: 180rpx;
-}
-.wifi-loader {
-  --background: #62abff;
-  --front-color: #4f29f0;
-  --back-color: #c3c8de;
-  --text-color: #414856;
-  width: 64px;
-  height: 64px;
-  border-radius: 50px;
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.wifi-loader svg {
-  position: absolute;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.wifi-loader svg circle {
-  position: absolute;
-  fill: none;
-  stroke-width: 6px;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transform: rotate(-100deg);
-  transform-origin: center;
-}
-.wifi-loader svg circle.back {
-  stroke: var(--back-color);
-}
-.wifi-loader svg circle.front {
-  stroke: var(--front-color);
-}
-.wifi-loader svg.circle-outer {
-  height: 86px;
-  width: 86px;
-}
-.wifi-loader svg.circle-outer circle {
-  stroke-dasharray: 62.75 188.25;
-}
-.wifi-loader svg.circle-outer circle.back {
-  animation: circle-outer135 1.8s ease infinite 0.3s;
-}
-.wifi-loader svg.circle-outer circle.front {
-  animation: circle-outer135 1.8s ease infinite 0.15s;
-}
-.wifi-loader svg.circle-middle {
-  height: 60px;
-  width: 60px;
-}
-.wifi-loader svg.circle-middle circle {
-  stroke-dasharray: 42.5 127.5;
-}
-.wifi-loader svg.circle-middle circle.back {
-  animation: circle-middle6123 1.8s ease infinite 0.25s;
-}
-.wifi-loader svg.circle-middle circle.front {
-  animation: circle-middle6123 1.8s ease infinite 0.1s;
-}
-.wifi-loader svg.circle-inner {
-  height: 34px;
-  width: 34px;
-}
-.wifi-loader svg.circle-inner circle {
-  stroke-dasharray: 22 66;
-}
-.wifi-loader svg.circle-inner circle.back {
-  animation: circle-inner162 1.8s ease infinite 0.2s;
-}
-.wifi-loader svg.circle-inner circle.front {
-  animation: circle-inner162 1.8s ease infinite 0.05s;
-}
-.wifi-loader .text {
-  position: absolute;
-  bottom: -40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-transform: lowercase;
-  font-weight: 500;
-  font-size: 14px;
-  letter-spacing: 0.2px;
-}
-.wifi-loader .text::before,
-.wifi-loader .text::after {
-  content: attr(data-text);
-}
-.wifi-loader .text::before {
-  color: var(--text-color);
-}
-.wifi-loader .text::after {
-  color: var(--front-color);
-  animation: text-animation76 3.6s ease infinite;
-  position: absolute;
-  left: 0;
-}
-@keyframes circle-outer135 {
-  0% { stroke-dashoffset: 25; }
-  25% { stroke-dashoffset: 0; }
-  65% { stroke-dashoffset: 301; }
-  80% { stroke-dashoffset: 276; }
-  100% { stroke-dashoffset: 276; }
-}
-@keyframes circle-middle6123 {
-  0% { stroke-dashoffset: 17; }
-  25% { stroke-dashoffset: 0; }
-  65% { stroke-dashoffset: 204; }
-  80% { stroke-dashoffset: 187; }
-  100% { stroke-dashoffset: 187; }
-}
-@keyframes circle-inner162 {
-  0% { stroke-dashoffset: 9; }
-  25% { stroke-dashoffset: 0; }
-  65% { stroke-dashoffset: 106; }
-  80% { stroke-dashoffset: 97; }
-  100% { stroke-dashoffset: 97; }
-}
-@keyframes text-animation76 {
-  0% { clip-path: inset(0 100% 0 0); }
-  50% { clip-path: inset(0); }
-  100% { clip-path: inset(0 0 0 100%); }
-}
-
 .ai-hd { display: block; font-size: 28rpx; font-weight: 600; color: #222; margin-bottom: 10rpx; }
 .ai-bd { display: block; width: 100%; font-size: 24rpx; color: #555; line-height: 1.8; }
 .ai-tip { display: block; font-size: 24rpx; color: #99c4e8; line-height: 1.8; margin-top: 4rpx; }
@@ -1713,57 +1515,93 @@ page { height: 100%; background: linear-gradient(180deg, #e8f4fd 0%, #f0f7ff 40%
 /* 输入栏 */
 .input-card {
   flex-shrink: 0;
+  margin: 0 24rpx calc(20rpx + env(safe-area-inset-bottom));
   background: #fff; border-radius: 18rpx;
-  padding: 16rpx 18rpx 20rpx; margin: 0 24rpx 20rpx;
+  padding: 12rpx 16rpx;
   box-shadow: 0 2rpx 12rpx rgba(79,172,254,0.08);
 }
-.inp { font-size: 26rpx; color: #333; padding-bottom: 14rpx; }
-.inp-ph { color: #b8d8f0; font-size: 24rpx; }
+.page.keyboard-open .input-card {
+  margin-bottom: 20rpx;
+}
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  min-height: 72rpx;
+}
+.inp {
+  flex: 1;
+  min-width: 0;
+  height: 72rpx;
+  font-size: 28rpx;
+  color: #333;
+  line-height: 72rpx;
+}
+.inp-ph { color: #b8d8f0; font-size: 28rpx; }
 
 .voice-area {
-  padding: 24rpx 0; text-align: center;
-  min-height: 80rpx; box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  box-sizing: border-box;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
 }
 .voice-area.recording {
   background: rgba(79,172,254,0.08);
-  border-radius: 12rpx;
 }
 .voice-tip {
-  font-size: 26rpx; color: #99c4e8;
+  font-size: 28rpx; color: #99c4e8;
 }
 .voice-tip.recording {
   color: #4facfe;
   animation: pulse 1s ease-in-out infinite;
 }
 
-.inp-tools { display: flex; align-items: center; justify-content: space-between; }
+.input-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
 .inp-btn {
-  width: 48rpx; height: 48rpx;
-  display: flex; align-items: center; justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.inp-mic {
-  width: 66rpx; height: 66rpx; border-radius: 50%;
-  background: linear-gradient(135deg, #4facfe, #6cb4ee);
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s;
-  touch-action: none;
+.inp-btn-icon {
+  font-size: 36rpx;
+  color: #bbb;
+  line-height: 1;
 }
-.inp-mic.pressed {
-  transform: scale(1.1);
-  box-shadow: 0 4rpx 20rpx rgba(79,172,254,0.45);
+.inp-btn-plus {
+  font-size: 40rpx;
 }
 
 .inp-send {
-  width: 66rpx; height: 66rpx; border-radius: 50%;
+  height: 64rpx;
+  padding: 0 24rpx;
+  border-radius: 32rpx;
   background: #ddd;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
 }
 .inp-send.active {
   background: linear-gradient(135deg, #4facfe, #6cb4ee);
+}
+.inp-send-txt {
+  font-size: 26rpx;
+  color: #fff;
+  white-space: nowrap;
 }
 
 /* 附件菜单 */

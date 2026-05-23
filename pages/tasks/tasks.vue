@@ -1,5 +1,6 @@
 <template>
   <view class="tasks-page">
+    <growth-task-mini-bar />
     <view class="bg-bubbles">
       <view class="bubble b1"></view>
       <view class="bubble b2"></view>
@@ -59,9 +60,9 @@
           <text class="task-title">{{ task.title }}</text>
           <text class="task-desc" v-if="task.description">{{ task.description }}</text>
           <view class="task-meta">
-            <view class="meta-item" v-if="task.dueDate">
+            <view class="meta-item" v-if="task.dueAt || task.dueDate">
               <text style="font-size:22rpx;">⏰</text>
-              <text class="meta-text">{{ task.dueDate }}</text>
+              <text class="meta-text">{{ task.dueAt || task.dueDate }}</text>
             </view>
             <view class="task-tag" :class="statusClass(task.status)">{{ statusText(task.status) }}</view>
           </view>

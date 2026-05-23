@@ -1,6 +1,7 @@
 import { registerPushToken, deletePushToken, getAccessToken } from './api.js'
 import { getOrCreateDeviceId } from './deviceId.js'
 import { navigateFromPushPayload, normalizePushPayload } from './pushNavigate.js'
+import { handleRealtimeMessage } from './realtime.js'
 
 let listenersBound = false
 
@@ -84,6 +85,18 @@ function storePendingPayload(raw) {
   if (data) uni.setStorageSync('pendingPushPayload', data)
 }
 
+/** 前台收到 FCM：即时更新角标/列表，并走与 WebSocket 相同的处理逻辑 */
+function handleForegroundPush(raw) {
+  if (!getAccessToken()) {
+    storePendingPayload(raw)
+    return
+  }
+  const data = normalizePushPayload(raw)
+  if (!data) return
+  handleRealtimeMessage(data)
+  storePendingPayload(raw)
+}
+
 export function consumePendingPushNavigation() {
   const raw = uni.getStorageSync('pendingPushPayload')
   if (!raw) return
@@ -104,7 +117,7 @@ export function setupPushListeners() {
   try {
     uni.onPushMessage((res) => {
       const payload = (res && res.data) || res
-      storePendingPayload(payload)
+      handleForegroundPush(payload)
     })
   } catch (e) {}
 
@@ -116,7 +129,7 @@ export function setupPushListeners() {
       }, false)
       plus.push.addEventListener('receive', (msg) => {
         const payload = (msg && msg.payload) || msg
-        storePendingPayload(payload)
+        handleForegroundPush(payload)
       }, false)
     }
   } catch (e) {}
